@@ -3,7 +3,7 @@ import argparse
 import config
 
 # NS API
-from NS import API, Math
+from NS import API, RegionInfo, NationInfo
 
 
 def banner():
@@ -12,10 +12,13 @@ def banner():
 
 
 def main(args):
+    # INIT
     mainNation = ""
+    target = args.target.lower().replace(" ", "_")
     doTrans = True  # :3
     skipDown = False
     forceDown = False
+    ban = args.banject
 
     if args.skip_download and args.force_download:
         exit("Error: cannot supply skip and force at the same time!")
@@ -40,6 +43,22 @@ def main(args):
         mainNation = input("Main nation: ")
 
     api = API(mainNation)
+
+    # PERFORM CALCULATIONS
+    regionInfo = api.regionInfo(target)
+    gap = regionInfo.targetInf - regionInfo.delegate.influence
+    print(
+        f"Delegate {regionInfo.delegate.nation} would require approximately {regionInfo.targetInf} influence - they have {regionInfo.delegate.influence}"
+    )
+    print(f"The deficit is: {gap}")
+    if ban:
+        pass
+
+    print()
+    print("Calculating purge targets")
+    print("The following BCROs are appointed:")
+    for RO in regionInfo.BCROs:
+        print(f"Nation {RO.nation} has {RO.influence} influence")
 
 
 ### INIT + OPTS
@@ -88,6 +107,13 @@ parser.add_argument(
 )
 parser.add_argument(
     "--force-download", action="store_true", help="force downloading nations.xml"
+)
+
+parser.add_argument(
+    "--banject",
+    action="store_true",
+    help="assume banjection, not just ejection (i.e., assume password in place). default: no",
+    default=False,
 )
 
 args = parser.parse_args()
