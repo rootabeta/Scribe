@@ -1,6 +1,7 @@
 import requests
 import config
 from defusedxml import ElementTree as ET
+import shutil
 
 
 class RegionInfo:
@@ -189,6 +190,8 @@ class API:
         nationinfo.influence -= float(
             infBlock.find("CENSUS").find("SCALE[@id='66']").findtext("SCORE")
         )  # Delete endos, to account for the game's estimate
+
+        nationinfo.influence -= 1
 
         return nationinfo
 
