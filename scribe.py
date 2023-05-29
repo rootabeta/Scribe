@@ -4,38 +4,36 @@ import config
 from os import path
 import gzip
 from defusedxml import ElementTree as ET
+import sqlite3
 
-# NS API
-from NS import API, RegionInfo, NationInfo
+from nationcache import Cache
+from targeting import Password, Transition, PassAndTrans
+from datetime import datetime
 
+def easyTime(timestamp):
+    if timestamp:
+        return datetime.fromtimestamp(timestamp)
+    else:
+        return "Unknown"
 
 def banner():
     with open("banner.txt", "r") as f:
         print(f.read().format(VERSION=config.VERSION, CODENAME=config.CODENAME))
 
-
 def main(args):
     # INIT
     mainNation = ""
-    target = args.target.lower().replace(" ", "_")
-    doTrans = True  # :3
-    skipDown = False
-    forceDown = False
-    ban = args.banject
+    region = args.target.lower().replace(" ", "_")
+    purge = False
+    if args.purge:
+        print("Warning: You are about to purge the database! This cannot be undone!")
+        confirmation = input("Are you sure you want to do this? (y/N) ")
+        if confirmation and confirmation[0].lower() == "y":
+            print("So be it.")
+            purge = True
 
-    if args.skip_download and args.force_download:
-        exit("Error: cannot supply skip and force at the same time!")
-
-    exempt = args.exempt
-    conserve = args.conserve
-
-    if args.no_trans:
-        doTrans = False
-
-    if args.skip_download:
-        skipDown = True
-    elif args.force_download:
-        forceDown = True
+    if args.locked and args.lock_only:
+        print("Error: cannot specify we want to lock AND we are already locked!")
 
     if args.mainNation:
         mainNation = args.mainNation
@@ -45,64 +43,53 @@ def main(args):
         )
         mainNation = input("Main nation: ")
 
-    api = API(mainNation)
+    cache = Cache(mainNation, region)
+    if purge:
+        # Initiate a full purge of the target region's cache data
+        cache.purge(routine=False)
+    if not args.cached:
+        cache.refresh()
+        newest, oldest = cache.dateRange(region)
+        print(f"The newest entry for {region} was refreshed on: {easyTime(newest)}")
+        print(f"The oldest entry for {region} was refreshed on: {easyTime(oldest)}")
+    else:
+        print("WARNING: You have selected to only use cached data")
+        print("This provides a performance boost at the cost of reduced temporal accuracy")
+        print("Relying on old or incomplete data can cause dangerously inaccurate results!")
+        newest, oldest = cache.dateRange(region)
+        print(f"The newest entry for {region} was refreshed on: {easyTime(newest)}")
+        print(f"The oldest entry for {region} was refreshed on: {easyTime(oldest)}")
 
-    # PERFORM CALCULATIONS
-    regionInfo = api.regionInfo(target)
-    gap = regionInfo.targetInf - regionInfo.delegate.influence
-    print(
-        f"Delegate {regionInfo.delegate.nation} would require approximately {regionInfo.targetInf} influence - they have {regionInfo.delegate.influence}"
-    )
-    print(f"The deficit is: {gap}")
+    allNations, WANations, nonWANations = cache.fetchNationLists()
+    
+    for nation in allNations:
+        print(f"{nation.name} has {nation.influence} influence (WA: {nation.WA}) - reliable report? {not nation.infUnreliable}")
 
-    if ban:
-        pass
+    # Compute firing solution for desired goal
+#    if args.locked:
+#        solution = Transition(cache)
+#    elif args.lock_only:
+#        solution = Password(cache)
+#    else:
+#        solution = PassAndTrans(cache)
 
-    print()
-    print("The following BCROs are appointed:")
-    for RO in regionInfo.BCROs:
-        if RO.nation not in exempt and (
-            RO.nation not in conserve or RO.influence > regionInfo.targetInf
-        ):
-            print(f"Nation {RO.nation} has {RO.influence} influence")
-    print()
-    print("Building target list")
+    # Print report to screen and CSVs
+#    solution.report()
 
-    print("Acquiring nations.xml.gz")
-    if (forceDown or not path.isfile("nations.xml.gz")) and not skipDown:
-        print("Downloading nations.xml.gz")
-        api.download_file(
-            "https://www.nationstates.net/pages/nations.xml.gz"
-        )  # Download nations.xml.gz
+    
 
-    elif not skipDown:
-        print("Existing nations.xml.gz file detected.")
-        confirmation = input("Overwrite? (Y/n) ")
-        if not (confirmation and confirmation.lower()[0] == "n"):
-            api.download_file(
-                "https://www.nationstates.net/pages/nations.xml.gz"
-            )  # Download nations.xml.gz
+    
 
-    print("Loading nations.xml")
-    with gzip.open("nations.xml.gz", mode="r") as f:
-        rawnations = f.read()
 
-    nationsxml = ET.fromstring(rawnations)
 
-    print("Parsing nations.xml")
 
-    print("Nations in target: ")
-    for nation in nationsxml.findall("NATION"):
-        if nation.find("REGION").text.lower().replace(
-            " ", "_"
-        ) == target.lower().replace(" ", "_"):
-            print(
-                nation.findtext("NAME"),
-                nation.findtext("UNSTATUS"),
-                nation.findtext("INFLUENCE"),
-                nation.findtext("ENDORSEMENTS"),
-            )
-            # print(nation.find("NAME").text, nation.find("LASTLOGIN").text, nation.find("LASTACTIVITY").text)
+
+
+
+
+
+
+
 
 
 ### INIT + OPTS
@@ -114,6 +101,7 @@ parser = argparse.ArgumentParser(description="Purging with prestige")
 parser.add_argument(
     "target", action="store", help="region scheduled for purge", metavar="region"
 )
+
 parser.add_argument(
     "--main",
     "-n",
@@ -123,42 +111,49 @@ parser.add_argument(
     metavar="main",
     dest="mainNation",
 )
+
+#parser.add_argument(
+#    "--exempt",
+#    action="store",
+#    help="BCROs who will not be purging",
+#    metavar="nation",
+#    default=None,
+#    nargs="*",
+#)
+
+#parser.add_argument(
+#    "--passworder",
+#    action="store",
+#    help="designate a specific nation to apply password; default is automatically selected.",
+#    metavar="nation",
+#    default=None
+#)
+
+#parser.add_argument(
+#    "--no-trans",
+#    action="store_true",
+#    help="delegate will not be required to remain above f/s transition threshhold",
+#)
+
 parser.add_argument(
-    "--exempt",
-    action="store",
-    help="BCROs who will not be purging",
-    metavar="RO",
-    default=[],
-    nargs="*",
-)
-parser.add_argument(
-    "--conserve",
-    action="store",
-    help="BCROs who will not be purging beyond amount required for secret password",
-    metavar="RO",
-    default=[],
-    nargs="*",
-)
-parser.add_argument(
-    "--no-trans",
+    "--locked",
     action="store_true",
-    help="delegate will not be required to remain above f/s transition threshhold",
-)
-parser.add_argument(
-    "--skip-download",
-    action="store_true",
-    help="skip downloading nations.xml if present",
-)
-parser.add_argument(
-    "--force-download", action="store_true", help="force downloading nations.xml"
+    help="assume region is already in passworded state, and calculate transition cost directly"
 )
 
 parser.add_argument(
-    "--banject",
+    "--lock-only",
     action="store_true",
-    help="assume banjection, not just ejection (i.e., assume password in place). default: no",
-    default=False,
+    help="only calculate cost to get to password"
 )
+
+parser.add_argument(
+    "--purge",
+    action="store_true",
+    help="purge database entries for the target region before anything else is done"
+)
+
+parser.add_argument("--cached",action="store_true",help="use cached database and do not refresh")
 
 args = parser.parse_args()
 
