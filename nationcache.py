@@ -290,7 +290,7 @@ class Cache():
             else:
                 reqspersec = "1.00" # Sure, whatever
 
-            statusBar = f"[{spinner[count % len(spinner)]}] {progress} refreshed. Last operation: {verb} {nation}. Time elapsed: {elapsed}. Est. Time Remaining: {remaining} (currently getting {reqspersec} r/s)"
+            statusBar = f"[{spinner[count % len(spinner)]}] {progress} refreshed. Last operation: {verb} {nation}. Time elapsed: {elapsed}. Estimated Time Remaining: {remaining} (currently getting {reqspersec} r/s)"
 
             while len(statusBar) < lastLen: 
                 statusBar += " "
