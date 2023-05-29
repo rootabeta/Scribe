@@ -250,6 +250,7 @@ class Cache():
         lastLen = len(bootMsg)
         print(bootMsg,end="\r",flush=True)
         requested = 0
+        skipped = 0
         for nation in (self.regionData.WAnations + self.regionData.nonWAnations): 
             if self.refresh_nation(nation, age, self.regionData.BCROnames):
                 verb = "Refreshed"
@@ -257,6 +258,8 @@ class Cache():
 
             else:
                 verb = "Found cached data for"
+                skipped += 1
+
             count += 1
             progress = f"{count}/{numNationsTotal}"
             secondsElapsed = int(datetime.now().timestamp()) - startTime
@@ -271,7 +274,12 @@ class Cache():
             # Then, Final - Y will give the estimated number of seconds remaining
 
             percentComplete = (float(count) / float(numNationsTotal))
-            secondsEstimated = secondsElapsed / percentComplete # 15s, 0.5 complete
+            requestsCompleted = (float(count - skipped) / float(numNationsTotal - skipped))
+            if requestsCompleted > 0:
+                secondsEstimated = secondsElapsed / requestsCompleted # Factor out DB cached lookups
+            else:
+                secondsEstimated = secondsElapsed / percentComplete
+
             remainingEstimated = secondsEstimated - secondsElapsed
 
             elapsed = timedelta(seconds=int(secondsElapsed))
