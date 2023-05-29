@@ -249,10 +249,12 @@ class Cache():
         bootMsg = "[|] Starting cache refresh. This may take a while."
         lastLen = len(bootMsg)
         print(bootMsg,end="\r",flush=True)
-
+        requested = 0
         for nation in (self.regionData.WAnations + self.regionData.nonWAnations): 
             if self.refresh_nation(nation, age, self.regionData.BCROnames):
                 verb = "Refreshed"
+                requested += 1
+
             else:
                 verb = "Found cached data for"
             count += 1
@@ -275,7 +277,12 @@ class Cache():
             elapsed = timedelta(seconds=int(secondsElapsed))
             remaining = timedelta(seconds=int(remainingEstimated))
 
-            statusBar = f"[{spinner[count % len(spinner)]}] {progress} refreshed. Last operation: {verb} {nation}. Time elapsed: {elapsed}. Est. Time Remaining: {remaining}"
+            if secondsElapsed:
+                reqspersec = round(float(requested) / float(secondsElapsed), 2)
+            else:
+                reqspersec = "1.00" # Sure, whatever
+
+            statusBar = f"[{spinner[count % len(spinner)]}] {progress} refreshed. Last operation: {verb} {nation}. Time elapsed: {elapsed}. Est. Time Remaining: {remaining} (currently getting {reqspersec} r/s)"
 
             while len(statusBar) < lastLen: 
                 statusBar += " "
