@@ -13,8 +13,8 @@
     ;.      . -`          [B]atched for
    ;.     . -`            [E]fficiency
    ::._.-`
-   (.-`                  VERSION: {VERSION}
-   .Y(.                 CODENAME: {CODENAME}
+   (.-`                   VERSION: {VERSION}
+   .Y(.                  CODENAME: {CODENAME}
   ((()))                          _        
   _)==(_         ()            o | |      
  | .--. |        /\  __   ,_     | |   _  
