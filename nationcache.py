@@ -162,6 +162,7 @@ class Cache():
                     )
                 )
                 con.commit()
+            con.close()
             return True
         
         elif row[2] < timestamp - age:
@@ -188,10 +189,13 @@ class Cache():
                      nationinfo.name
                     )
                 )
+                con.commit()
 
+            con.close()
             return True
 
         # We found a nation, and its timestamp was recent
+        con.close()
         return False
 
     def purge(self, routine=True):
