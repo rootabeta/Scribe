@@ -303,14 +303,18 @@ class Cache():
             else:
                 reqspersec = "1.00" # Sure, whatever
             
+
             reqspersecMsg = " (currently getting {reqspersec} r/s)"
             statusBar = f"[{spinner[count % len(spinner)]}] {progress} refreshed. Last operation: {verb} {nation}. Time elapsed: {elapsed}. Estimated Time Remaining: {remaining}"
+
             if len(statusBar + reqspersecMsg) < get_terminal_size()[1]:
                 statusBar += reqspersecMsg
-            while len(statusBar) < lastLen and len(statusBar) < get_terminal_size()[1]: 
+
+            while len(statusBar) < lastLen: #and len(statusBar) < get_terminal_size()[1]: 
                 statusBar += " "
 
             lastLen = len(statusBar)
+
             print(statusBar, end="\r", flush=True)
 
         print(f"[+] Finished updating cache! Time taken: {elapsed}" + " " * lastLen)
