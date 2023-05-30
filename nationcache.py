@@ -2,6 +2,7 @@ import sqlite3
 from nsapi import API, standardize, Nation, Region
 from datetime import datetime, timedelta
 import json
+from os import get_terminal_size
 
 class Cache():
     def __init__(self, mainNation, region):
@@ -106,6 +107,9 @@ class Cache():
         self.nationListNonWA = sorted(self.nationListNonWA, key=lambda x: x.influence)
 
         return self.nationList
+    
+    def fetchRegionInfo(self):
+        return self.regionData
 
     # Return nation list for other targeting to make use of
     def fetchNationLists(self):
@@ -274,7 +278,12 @@ class Cache():
             # Then, Final - Y will give the estimated number of seconds remaining
 
             percentComplete = (float(count) / float(numNationsTotal))
-            requestsCompleted = (float(count - skipped) / float(numNationsTotal - skipped))
+
+            if numNationsTotal - skipped > 0:
+                requestsCompleted = (float(count - skipped) / float(numNationsTotal - skipped))
+            else:
+                requestsCompleted = 0
+
             if requestsCompleted > 0:
                 secondsEstimated = secondsElapsed / requestsCompleted # Factor out DB cached lookups
             else:
@@ -289,16 +298,17 @@ class Cache():
                 reqspersec = round(float(requested) / float(secondsElapsed), 2)
             else:
                 reqspersec = "1.00" # Sure, whatever
-
-            statusBar = f"[{spinner[count % len(spinner)]}] {progress} refreshed. Last operation: {verb} {nation}. Time elapsed: {elapsed}. Estimated Time Remaining: {remaining} (currently getting {reqspersec} r/s)"
-
-            while len(statusBar) < lastLen: 
+            
+            reqspersecMsg = " (currently getting {reqspersec} r/s)"
+            statusBar = f"[{spinner[count % len(spinner)]}] {progress} refreshed. Last operation: {verb} {nation}. Time elapsed: {elapsed}. Estimated Time Remaining: {remaining}"
+            if len(statusBar + reqspersecMsg) < get_terminal_size()[1]:
+                statusBar += reqspersecMsg
+            while len(statusBar) < lastLen and len(statusBar) < get_terminal_size()[1]: 
                 statusBar += " "
 
             lastLen = len(statusBar)
             print(statusBar, end="\r", flush=True)
 
-        
         print(f"[+] Finished updating cache! Time taken: {elapsed}" + " " * lastLen)
         print("Compiling nation lists")
         self.buildNationLists()

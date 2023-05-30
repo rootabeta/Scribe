@@ -63,6 +63,7 @@ class math:
         # floor of 400
         if cost < floor:
             return floor
+
         else:
             return cost
 
@@ -74,11 +75,11 @@ class math:
         maxNonWA = 200
         floor = 500
 
-        if nonWA > maxNonWA:
-            nonWA = maxNonWA
+        if numNonWA > maxNonWA:
+            numNonWA = maxNonWA
 
         # 20 * nonWA and 80 * WA
-        cost = (20 * nonWA) + (80 * numWA)
+        cost = (20 * numNonWA) + (80 * numWA)
 
         # Floor of 500
         if cost < floor:

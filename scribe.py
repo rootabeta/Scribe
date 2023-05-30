@@ -6,9 +6,10 @@ import gzip
 from defusedxml import ElementTree as ET
 import sqlite3
 
+from nsapi import math
 from nationcache import Cache
-from targeting import Password, Transition, PassAndTrans
 from datetime import datetime
+from targeting import SetPassword, Transition, PassAndTrans
 
 def easyTime(timestamp):
     if timestamp:
@@ -47,13 +48,14 @@ def main(args):
     if purge:
         # Initiate a full purge of the target region's cache data
         cache.purge(routine=False)
+
     if not args.cached:
         cache.refresh()
         newest, oldest = cache.dateRange(region)
         print(f"The newest entry for {region} was refreshed on: {easyTime(newest)}")
         print(f"The oldest entry for {region} was refreshed on: {easyTime(oldest)}")
     else:
-        print("WARNING: You have selected to only use cached data")
+        print("WARNING: You have selected to only use previously cached data")
         print("This provides a performance boost at the cost of reduced temporal accuracy")
         print("Relying on old or incomplete data can cause dangerously inaccurate results!")
         newest, oldest = cache.dateRange(region)
@@ -61,9 +63,18 @@ def main(args):
         print(f"The oldest entry for {region} was refreshed on: {easyTime(oldest)}")
 
     allNations, WANations, nonWANations = cache.fetchNationLists()
+    regionInfo = cache.fetchRegionInfo() # Useful things like who is RO or delegate
     
-    for nation in allNations:
-        print(f"{nation.name} has {nation.influence} influence (WA: {nation.WA}) - reliable report? {not nation.infUnreliable}")
+    print(f"Current estimated cost to password:  {math.password(len(allNations))}")
+    print(f"Current estimated cost to transition: {math.transition(len(WANations), len(nonWANations))}")
+
+    Password = SetPassword(cache, passworder=args.passworder)
+    Password.nofuture()
+    Password.semifuture()
+    Password.future()
+    
+    #for nation in allNations:
+    #    print(f"{nation.name} has {nation.influence} influence (WA: {nation.WA}) - reliable report? {not nation.infUnreliable}")
 
     # Compute firing solution for desired goal
 #    if args.locked:
@@ -121,13 +132,13 @@ parser.add_argument(
 #    nargs="*",
 #)
 
-#parser.add_argument(
-#    "--passworder",
-#    action="store",
-#    help="designate a specific nation to apply password; default is automatically selected.",
-#    metavar="nation",
-#    default=None
-#)
+parser.add_argument(
+    "--passworder",
+    action="store",
+    help="designate a specific nation to apply password; default is automatically selected.",
+    metavar="nation",
+    default=None
+)
 
 #parser.add_argument(
 #    "--no-trans",
