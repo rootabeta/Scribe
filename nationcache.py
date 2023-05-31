@@ -3,6 +3,7 @@ from nsapi import API, standardize, Nation, Region
 from datetime import datetime, timedelta
 import json
 from os import get_terminal_size
+import random
 
 class Cache():
     def __init__(self, mainNation, region):
@@ -259,14 +260,19 @@ class Cache():
         print(bootMsg,end="\r",flush=True)
         requested = 0
         skipped = 0
-        for nation in (self.regionData.WAnations + self.regionData.nonWAnations): 
+        allNationsInRegion = self.regionData.WAnations + self.regionData.nonWAnations
+        # Randomize order
+        random.shuffle(allNationsInRegion)
+        #for nation in (self.regionData.WAnations + self.regionData.nonWAnations): 
+
+        for nation in allNationsInRegion:
             if self.refresh_nation(nation, age, self.regionData.BCROnames):
                 verb = "Refreshed"
-                requested += 1
+              #  requested += 1
 
             else:
                 verb = "Found cached data for"
-                skipped += 1
+              #  skipped += 1
 
             count += 1
             progress = f"{count}/{numNationsTotal}"
@@ -299,7 +305,9 @@ class Cache():
             remaining = timedelta(seconds=int(remainingEstimated))
 
             if secondsElapsed:
-                reqspersec = round(float(requested) / float(secondsElapsed), 2)
+                # Now that nation order is randomized, we can use this as an accurate example again
+                reqspersec = round(percentComplete,2) 
+                #reqspersec = round(float(requested) / float(secondsElapsed), 2)
             else:
                 reqspersec = "1.00" # Sure, whatever
             

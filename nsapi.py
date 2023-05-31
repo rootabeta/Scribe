@@ -182,12 +182,15 @@ class API():
                 window = 30
 
             # 30 seconds, 50 requests, can make 50/30 requests per second, so each request should take 30/50 seconds to complete
-            delay = float(window) / float(remaining)
+            if remaining <= 0:
+                delay = window
+            else:
+                delay = float(window) / float(remaining)
 
-            if delay > 0.75:
-                delay = 0.75  # 30 second wait seems silly, we have other things to do! 0.75 is the usual cap for things like FattKatt, so we use that.
+                if delay > 0.75:
+                    delay = 0.75  # 30 second wait seems silly, we have other things to do! 0.75 is the usual cap for things like FattKatt, so we use that.
 
-            time.sleep(window / remaining)
+            time.sleep(delay) #window / remaining
 
             return r  # In case we need to extract other data
         elif r.status_code == 404:
@@ -242,10 +245,13 @@ class API():
                 else:
                     window = 30
 
-                delay = float(window) / float(remaining)
+                if remaining <= 0:
+                    delay = float(window)
+                else:
+                    delay = float(window) / float(remaining)
 
-                if delay > 0.75:
-                    delay = 0.75
+                    if delay > 0.75:
+                        delay = 0.75
 
                 time.sleep(delay)
 
