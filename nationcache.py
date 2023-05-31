@@ -116,7 +116,7 @@ class Cache():
 
         # Guardian against empty data
         if not row:
-            print(f"{nation} not in DB!")
+#            print(f"{nation} not in DB!")
             return None
 
         nationData.name = nation

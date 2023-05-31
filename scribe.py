@@ -9,7 +9,10 @@ import sqlite3
 from nsapi import math
 from nationcache import Cache
 from datetime import datetime
-from targeting import JustPassword, Transition, PassAndTrans
+
+# No easy frontend for you, we hardcode this sucka
+# Easy frontend - just pass it our starting conditions, and it will return a procedure to get there.
+# from reachstate import EndState
 
 def easyTime(timestamp):
     if timestamp:
@@ -19,7 +22,7 @@ def easyTime(timestamp):
 
 def banner():
     with open("banner.txt", "r") as f:
-        print(f.read().format(VERSION=config.VERSION, CODENAME=config.CODENAME))
+        print(f.read().format(VERSION=config.VERSION, CODENAME=config.CODENAME),end="",flush=True)
 
 def main(args):
     # INIT
@@ -76,40 +79,10 @@ def main(args):
     print(f"Current estimated cost to password:  {math.password(len(allNations))}")
     print(f"Current estimated cost to transition: {math.transition(len(WANations), len(nonWANations))}")
 
-    Password = JustPassword(cache, passworder=args.passworder)
-#    Password.nofuture()
-#    Password.semifuture()
-#    Password.future()
-    
-    #for nation in allNations:
-    #    print(f"{nation.name} has {nation.influence} influence (WA: {nation.WA}) - reliable report? {not nation.infUnreliable}")
-
-    # Compute firing solution for desired goal
-#    if args.locked:
-#        solution = Transition(cache)
-#    elif args.lock_only:
-#        solution = Password(cache)
-#    else:
-#        solution = PassAndTrans(cache)
-
-    # Print report to screen and CSVs
-#    solution.report()
-
-    
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
+    # Set our desired state. It will give us a recipe containing firing plans
+    state = EndState(cache, allNations, WANations, nonWANations, regionInfo, not args.locked, not args.lock_only)
+    state.generateRecipes()
+    result = state.pickBest()
 
 ### INIT + OPTS
 
