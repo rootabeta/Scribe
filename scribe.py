@@ -9,7 +9,7 @@ import sqlite3
 from nsapi import math
 from nationcache import Cache
 from datetime import datetime
-from targeting import SetPassword, Transition, PassAndTrans
+from targeting import JustPassword, Transition, PassAndTrans
 
 def easyTime(timestamp):
     if timestamp:
@@ -62,16 +62,24 @@ def main(args):
         print(f"The newest entry for {region} was refreshed on: {easyTime(newest)}")
         print(f"The oldest entry for {region} was refreshed on: {easyTime(oldest)}")
 
+    # Deadline is... much harder
+    if args.fast_forward:
+        print(f"WARNING: You have chosen to forecast {args.fast_forward} UPDATES (not days) ahead.")
+        print(f"The generated firing solution, if any, may not be suitable for immediate use.")
+#        cache.fastForward(args.forecast)
+        # Manually rebuild nationcache with forecasting
+        cache.fastForward(args.fast_forward) 
+
     allNations, WANations, nonWANations = cache.fetchNationLists()
     regionInfo = cache.fetchRegionInfo() # Useful things like who is RO or delegate
     
     print(f"Current estimated cost to password:  {math.password(len(allNations))}")
     print(f"Current estimated cost to transition: {math.transition(len(WANations), len(nonWANations))}")
 
-    Password = SetPassword(cache, passworder=args.passworder)
-    Password.nofuture()
-    Password.semifuture()
-    Password.future()
+    Password = JustPassword(cache, passworder=args.passworder)
+#    Password.nofuture()
+#    Password.semifuture()
+#    Password.future()
     
     #for nation in allNations:
     #    print(f"{nation.name} has {nation.influence} influence (WA: {nation.WA}) - reliable report? {not nation.infUnreliable}")
@@ -156,6 +164,14 @@ parser.add_argument(
     "--lock-only",
     action="store_true",
     help="only calculate cost to get to password"
+)
+
+parser.add_argument(
+    "--fast-forward",
+    action="store",
+    help="estimate a certain of updates in the future, instead of now",
+    type=int,
+    default=0
 )
 
 parser.add_argument(

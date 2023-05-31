@@ -13,18 +13,59 @@ class Cache():
         self.region = standardize(region)
         self.api = API(mainNation)
 
-        # Set up operating environment
-        self.build_database()
-        self.loadAPI()
-
-        # Build the nation list from cache
-        # This way, even if we never refresh, we can still use data
-        #self.nationList = self.buildNationLists() 
 
         self.nationList = []
         self.nationListNonWA = []
         self.nationListWA = []
 
+        # Build the nation list from cache
+        # This way, even if we never refresh, we can still use data
+
+        # Set up operating environment
+        self.build_database()
+        self.loadAPI()
+
+        # Build nationlists
+        self.buildNationLists()
+
+    def fastForward(self, updates):
+        # Go through cache and build nation list
+        # DOES NOT make requests
+
+        # Clear nationlist
+        self.nationList = []
+        self.nationListNonWA = []
+        self.nationListWA = []
+
+        for nation in self.regionData.WAnations:
+            nationData = self.fetch_nation_cached(nation)
+            if not nationData:
+                continue
+
+            influenceAdjustment = len(nationData.endorsers) 
+            influenceAdjustment += 1
+
+            nationData.influence += (influenceAdjustment * updates)
+
+            self.nationList.append(nationData)
+            self.nationListWA.append(nationData)
+
+        for nation in self.regionData.nonWAnations:
+            nationData = self.fetch_nation_cached(nation)
+            if not nationData:
+                continue
+
+            influenceAdjustment = len(nationData.endorsers) # 0
+            influenceAdjustment += 1 # Natural growth
+
+            nationData.influence += influenceAdjustment * updates
+
+            self.nationList.append(nationData)
+            self.nationListNonWA.append(nationData)
+
+        self.nationList = sorted(self.nationList, key=lambda x: x.influence)
+        self.nationListWA = sorted(self.nationListWA, key=lambda x: x.influence)
+        self.nationListNonWA = sorted(self.nationListNonWA, key=lambda x: x.influence)
 
     # Instantiate API and set regionData 
     def loadAPI(self):
@@ -50,6 +91,16 @@ class Cache():
         return newest, oldest
 
     def fetch_nation(self, nation):
+        seeker = standardize(nation)
+        for nation in self.nationList:
+            if seeker == nation.name:
+                return nation
+
+        return None
+
+    # Return TRUE value from DB. Does not account for forecast!
+    # However, it does not require an existing nation list, and is faster!
+    def fetch_nation_cached(self, nation):
         nation = standardize(nation)
         nationData = Nation()
 
@@ -65,6 +116,7 @@ class Cache():
 
         # Guardian against empty data
         if not row:
+            print(f"{nation} not in DB!")
             return None
 
         nationData.name = nation
@@ -90,16 +142,22 @@ class Cache():
         # Go through cache and build nation list
         # DOES NOT make requests
 
-        # Clear nationlist
+        # Clear nationlists
         self.nationList = []
+        self.nationListNonWA = []
+        self.nationListWA = []
 
         for nation in self.regionData.WAnations:
-            nationData = self.fetch_nation(nation)
+            nationData = self.fetch_nation_cached(nation)
+            if not nationData:
+                continue
             self.nationList.append(nationData)
             self.nationListWA.append(nationData)
 
         for nation in self.regionData.nonWAnations:
-            nationData = self.fetch_nation(nation)
+            nationData = self.fetch_nation_cached(nation)
+            if not nationData:
+                continue
             self.nationList.append(nationData)
             self.nationListNonWA.append(nationData)
 
@@ -107,8 +165,6 @@ class Cache():
         self.nationListWA = sorted(self.nationListWA, key=lambda x: x.influence)
         self.nationListNonWA = sorted(self.nationListNonWA, key=lambda x: x.influence)
 
-        return self.nationList
-    
     def fetchRegionInfo(self):
         return self.regionData
 
