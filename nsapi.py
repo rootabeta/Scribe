@@ -105,7 +105,7 @@ class math:
 
     # How much would it cost to both eject and ban (i.e., banject)?
     def RObanject(target):
-        cost = ROban(target) + ROeject(target)
+        cost = math.ROban(target) + math.ROeject(target)
         return cost
 
     ### Same calculations, but with delegate, who does not have 200% cost increase
@@ -122,7 +122,7 @@ class math:
 
     # How much would it cost to both eject and ban (i.e., banject)?
     def DELbanject(target):
-        cost = ROban(target) + ROeject(target)
+        cost = math.ROban(target) + math.ROeject(target)
         return cost
 
 class API():

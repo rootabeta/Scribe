@@ -72,9 +72,10 @@ def main(args):
         # Manually rebuild nationcache with forecasting
         cache.fastForward(args.fast_forward) 
 
+
     allNations, WANations, nonWANations = cache.fetchNationLists()
     regionInfo = cache.fetchRegionInfo() # Useful things like who is RO or delegate
-    
+
     print(f"Current estimated cost to password:  {math.password(len(allNations))}")
     print(f"Current estimated cost to transition: {math.transition(len(WANations), len(nonWANations))}")
 

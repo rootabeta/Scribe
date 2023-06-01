@@ -1,4 +1,7 @@
+from math import ceil
+from copy import deepcopy
 from nsapi import math
+from random import random, randint
 
 class Hitlist():
     def __init__(self, nation, cutoff=0, ban=True, delegate=False):
@@ -35,6 +38,16 @@ class Hitlist():
 
         if makeCSV:
             self.makeCSV()
+
+    def estimateDeficit(self, influence):
+        # How much do we need to banject?
+        cost = self.estimateCost(influence)
+        
+        # How much do I have to play with?
+        remaining = self.remainingInfluence - self.cutoff
+
+        # I need 5 and I have 4 - I need 1 more. 
+        return cost - remaining
 
     def estimateCost(self, influence):
         # Ban, as non-del and del
@@ -112,6 +125,8 @@ class FiringSolution():
         self.total = 0
         self.failed = 0
 
+        self.failure = False
+
     # Add someone we want GONE
     def addTarget(self, target): #), influence, isWA):
         self.cost += target.influence
@@ -139,6 +154,10 @@ class FiringSolution():
 
         total = len(self.targets)
         self.total = total
+        deficits = {}
+        for ROname in self.hitlists.keys():
+            # How much MORE influence do we need?
+            deficits[ROname] = 0
 
         for target in self.targets[::-1]:
             # Fetch each nation's hitlist
@@ -151,31 +170,66 @@ class FiringSolution():
                 if offer > 0:
                     offers.append((ROname, offer))
                     infConsumed += offer
-
+            
             # Seek who is closest to getting soaked up exactly
+            # Well shiiiit, nobody is offering. Let's just try for funsies.
             if not offers:
-                print(f"Error: We have run out of influence! Processed {processed}/{total}")
-                print(f"Died trying to banject {target.name}")
-                print(f"Influence consumed: {infConsumed}")
+               # print(f"Error: We have run out of influence! Processed {processed}/{total}")
+               # print(f"Died trying to banject {target.name}")
+               # print(f"Influence consumed: {infConsumed}")
 
+                self.failure = True
                 self.failed = processed
+                eviloffers = []
 
-                return False
+                for ROname in self.hitlists.keys():
+                    RO = self.hitlists[ROname]
+
+                    # Can't hit. How much do we need to make it happen?
+                    if RO.canHit(target.influence) == -1:
+                        eviloffer = RO.estimateDeficit(target.influence) + deficits[ROname]
+#                        print(ROname, eviloffer)
+                        eviloffers.append((ROname, eviloffer))
+
+                    # Who has the smallest deficit?
+
+                if eviloffers:
+                    hitman = min(eviloffers, key=lambda x: x[1])
+
+                    deficits[hitman[0]] = hitman[1] #+= hitman[1]
+
+#                    self.hitlists[hitman[0]].addTarget(target)
+#
+#                return False
+                else:
+                    print("Well that can't be right")
 
             else:
+                # Who is closest?
                 hitman = min(offers, key=lambda x: x[1])
                 self.hitlists[hitman[0]].addTarget(target)
+                #print(f"{hitman[0]} will take {target.name}, leaving them with {self.hitlists[hitman[0]].remainingInfluence} influence to spare ({self.hitlists[hitman[0]].consumedInfluence} used of {self.hitlists[hitman[0]].startingInfluence} and a floor of {self.hitlists[hitman[0]].cutoff})")
 
                 processed+=1
 
-        return True
+        if deficits:
+            print("DEFICIT REPORT:")
+            for key in deficits.keys():
+                print(f"{key} is short by {deficits[key]} influence")
+
+        if not self.failure:
+            return True
+        else:
+            return False
+
     def makeReport(self):
         pass
 
 class Transitions:
     modes = ["nofuture","semifuture","future"]
 
-    def generateAll(startState):
+    def generateAll(StartState):
+        startState = StartState #deepcopy(StartState)
         allTransitions = []
         for mode in Transitions.modes:
             transition = Transitions.Transition(startState, mode=mode)
@@ -186,7 +240,7 @@ class Transitions:
 
     class Transition():
         def __init__(self, startState, mode="nofuture"):
-            self.startState = startState
+            self.startState = deepcopy(startState)
             self.mode = mode
 
             # Firing solution chosen by the given mode
@@ -235,7 +289,8 @@ class Passwords:
     modes = ["nofuture","semifuture","future","nofuture_noex","semifuture_noex","future_noex"]
 
     # Generate all firing solutions
-    def generateAll(startState):
+    def generateAll(oldStartState):
+        startState = oldStartState
         allPasswords = []
         for mode in Passwords.modes:
             # generates an end state
@@ -246,25 +301,28 @@ class Passwords:
         return allPasswords
 
     class Password():
-        def __init__(self, startState, mode="nofuture_noex", passworder=None):
+        def __init__(self, startState, mode="nofuture_noex", passworderOverride=None):
             self.mode = mode
-            self.startState = startState
+            self.startState = deepcopy(startState)
+            #self.startState = startState
 
             # Special feature - who will do the passwording?
-            self.passworder = passworder
+            self.passworder = passworderOverride
 
             # List of who is banned in what order by whom
             self.firingSolution = None
             # Used to determine next phase starting conditions
-            self.endState = self.startState
+            self.endState = None
+#            self.endState = deepcopy(self.startState)
+
+
+            # Never ban an RO or delegate
+            # For obvious reasons
 
             if mode == "none":
                 self.firingSolution = None
-                self.endState = self.startState
+                self.endState = deepcopy(self.startState)
 
-            # Each sets
-            # self.firingSolution
-            # self.endState
             elif mode == "nofuture":
                 self.nofuture()
 
@@ -275,44 +333,138 @@ class Passwords:
                 self.future()
 
             elif mode == "nofuture_noex":
-                self.nofuture_noex()
+                self.nofuture()
 
             elif mode == "semifuture_noex":
-                self.semifuture_noex()
+                self.semifuture()
 
             elif mode == "future_noex":
-                self.future_noex()
+                self.future()
 
-        # O.G. algorithms, EXCEPT that anyone endorsing
-        # the delegate or at least one officer is exempt
-        def nofuture(self):
 
-            return
+        # Blind purge of fury
+        # Influence is all we care about, nothing more
+        def nofuture(self, exempt=[]):
+            # We will never touch the startState, only the endState
+            # Even during data fetches
+            # Get all nations
+            print("Computing nofuture password strategy")
+            self.endState = deepcopy(self.startState)
+            self.firingSolution = FiringSolution()
 
-        def semifuture(self):
+            canPassword = [RO for RO in self.endState.RONations if RO.influence > self.endState.getCosts()[0]]
+            if canPassword:
+                passworder = min(canPassword, key=lambda x: x.influence)
+                print(f"Passworder selected: {passworder.name} ({passworder.influence} influence)")
+                print(f"Passworder HAS sufficient influence! No purge necessary! Cost is {self.endState.getCosts()[0]}")
+                return
+            else:
+                # Whoever is closest to being able to set will set
+                passworder = max([RO for RO in self.endState.RONations], key=lambda x: x.influence)
+                print(f"Passworder selected: {passworder.name} ({passworder.influence} influence)")
+                print(f"Passworder does NOT have sufficient influence. Cost to password is {self.endState.getCosts()[0]}")
 
-            return
+            delegate = self.endState.delegateNation
+            # Sort targets by influence - cheapest first
+            targets = self.endState.nations
+            targets = sorted(targets, key=lambda x: x.influence)
 
-        def future(self):
+            mindex = 0
 
-            return
+            # If we need another target, and we have another to pick from, launch the attack
+            while self.endState.getCosts()[0] > passworder.influence and len(targets) > mindex:
+                # Remove cheapest remaining target and assign to targetlist
+                considered = targets[mindex]
+                # If they are an RO, delegate, or anyone else we want to keep around, skip
+                if considered.name in self.endState.donotban or considered.name in exempt: 
+#                    print(f"Skipping {considered.name}")
+                    mindex += 1
+                    continue
+                # Otherwise, they are the lowest on the totem pole! Make em go away.
+                else:
+                    target = targets.pop(mindex)
+                    #print(f"Hitting {target.name}")
+                    self.firingSolution.addTarget(target)
+                    self.endState.remove(target.name)
 
-        # O.G. algorithms
-        # We can do silly things like eject our own endorsers,
-        # Because we can predict how this will affect us later
-        # when we evaluate the resulting costs
-        def nofuture_noex(self):
+            if self.endState.getCosts()[0] > passworder.influence:
+                # Should never happen unless NOBODY has like, ANY influence
+                print("Error: Exhausted target list with nofuture strategy (somehow)")
+                print(f"Cost is {self.endState.getCosts()[0]}, we have {passworder.influence}")
+                print(f"Estimated gap: {passworder.influence-self.endState.getCosts()[0]}")
 
-            return
+                self.firingSolution = None
+                self.endState = None
 
-        def semifuture_noex(self):
+            else:
 
-            return
+                print("Found potential firing list with nofuture strategy.")
+                print(f"Password cost is {self.endState.getCosts()[0]}, we have {passworder.influence}")
+                print(f"Transition cost is {self.endState.getCosts()[1]}, we have {delegate.influence}")
+                print(f"Requires banjecting {len(self.firingSolution.targets)} targets out of {len(self.startState.nations)}, leaving {len(self.endState.nations)}")
+               # print("Starting influences:")
+               # for RO in self.endState.RONations:
+               #     print(f"{RO.name} -> {RO.influence} influence")
 
-        def future_noex(self):
+                hitlists = {}
+                for RO in self.endState.RONations:
+                    if RO.name == passworder.name:
+               #         print(f"{RO.name} must stay above {math.password(len(self.endState.nations))}")
+                        hitlists[RO.name] = Hitlist(RO, cutoff=ceil(math.password(len(self.endState.nations))))
+                    else:
+                        hitlists[RO.name] = Hitlist(RO)
 
-            return
+                if delegate:
+                    hitlists[delegate.name] = Hitlist(delegate, cutoff=ceil(self.endState.getCosts()[1]))
 
+                self.firingSolution.setHitlists(hitlists)
+                if self.firingSolution.buildFiringSolution():
+                    print("Success!")
+                else:
+                    print("Failure")
+
+                #print("Ending influences:")
+                #for RO in self.endState.RONations:
+                #    print(f"{RO.name} -> {RO.influence} influence")
+
+                print(f"Password cost is {self.endState.getCosts()[0]}, we have {passworder.influence}")
+                print(f"Transition cost is {self.endState.getCosts()[1]}, we have {delegate.influence}")
+                print("")
+
+#                hitlists = {}
+#                for RO in self.RONations:
+#                    if RO.name == self.passworder.name:
+#                        # Add a cutoff, plus padding to be sure
+#                        hitlists[RO.name] = Hitlist(RO,cutoff=ceil(math.password(len(targets))))
+#                    else:
+#                        # Assume all other ROs influence is entirely expendable
+#                        hitlists[RO.name] = Hitlist(RO)
+#
+#                if self.delegate and self.delegate not in self.RONations:
+#                    hitlists[self.delegate.name] = Hitlist(self.delegate, cutoff=transCost, delegate=True)
+#
+#                firingSolution.setHitlists(hitlists)
+#
+#                if firingSolution.buildFiringSolution():
+
+
+        # Slightly less blind
+        # We will chew through all the non-WA, then move on to the WA
+        def semifuture(self, exempt=[]):
+            self.firingSolution = FiringSolution()
+            self.endState = self.startState
+
+
+        # We will prioritize non-WA, UNLESS banjecting the number of WA
+        # that that influence buys us reduces TRANSITION influence cost
+        # Just going by influence may be most efficient to password, 
+        # But password+transition will require a little forward thinking
+        def future(self, exempt=[]):
+            self.firingSolution = FiringSolution()
+            self.endState = self.startState
+
+
+        # Diagnostic and statistic
         def getMode(self):
             return self.mode
 
@@ -335,8 +487,10 @@ class Recipe():
 
         if self.transition:
             self.endState = self.transition.getState()
+
         elif self.password:
             self.endState = self.password.getState()
+
         else:
             self.endState = None
 
@@ -352,7 +506,6 @@ class Recipe():
             T = "XT"
 
         print(f"{P} -> {T}")
-
 
     def getState():
         return self.endState
@@ -376,17 +529,56 @@ class State():
         self.passwordCost = math.password(len(self.nations))
         self.transitionCost = math.transition(len(self.WANations), len(self.nonWANations))
 
-        self.ROs = []
+        self.donotban = self.RONames
+        self.donotban.append(self.delegateName)
 
-        self.delegate = None
+        self.RONations = []
+        self.delegateNation = None
         for nation in self.nations:
             if nation.name == self.delegateName:
-                self.delegate = nation
+                self.delegateNation = nation
+                self.delegateNation.influence = int(self.delegateNation.influence)
                 break
 
         for nation in self.nations:
-            if nation.name in self.RONames:
-                self.ROs.append(nation)
+            if nation.name in self.RONames and nation.name != self.delegateName:
+                self.RONations.append(nation)
+
+    # Might as well
+    def getCosts(self):
+        self.updateCosts()
+        return self.passwordCost, self.transitionCost
+
+    # Update the costs
+    def updateCosts(self):
+        self.passwordCost = math.password(len(self.nations))
+        self.transitionCost = math.transition(len(self.WANations), len(self.nonWANations))
+#        print(f"New costs are now {self.passwordCost}, {self.transitionCost}")
+
+    # Simulate a nations removal from the region
+    def remove(self, name):
+        index = 0
+        for nation in self.nations:
+            if nation.name == name:
+                del(self.nations[index])
+                break
+            index+=1
+
+        index = 0
+        for nation in self.WANations:
+            if nation.name == name:
+                del(self.WANations[index])
+                break
+            index+=1
+
+        index = 0
+        for nation in self.nonWANations:
+            if nation.name == name:
+                del(self.nonWANations[index])
+                break
+            index+=1
+
+        self.updateCosts()
 
 # The desired end-state of execution
 # We give it what we have to want with, and ask of it
@@ -421,14 +613,14 @@ class EndState():
             for password in passwords:
                 # Make a transition plan based on the password plan we just ran
                 if self.doTransition:
-                    transitions = Transitions.generateAll(password.getState())
+                    passwordEndState = password.getState()
+                    transitions = Transitions.generateAll(passwordEndState) 
                     for transition in transitions:
                         recipes.append(Recipe(self.startState, password, transition))
 
                 # No need to transition, mission accomplished
                 elif not self.doTransition:
                     recipes.append(Recipe(self.startState, password, None))
-
 
         # We want transition only, no password
         elif self.doTransition:
