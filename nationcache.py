@@ -294,18 +294,19 @@ class Cache():
         self.purge()
 
         print("Ready to refresh cache")
-        print(f"Estimated maximum number of requests: {numNationsTotal}")
-        seconds = numNationsTotal # About 1 request per second, mb a little more, for a worst-case ceiling
+        seconds = 0
+#        print(f"Estimated maximum number of requests: {numNationsTotal}")
+#        seconds = numNationsTotal # About 1 request per second, mb a little more, for a worst-case ceiling
         # People prefer being done ahead of schedule as opposed to the alternative
         # Still, I strive for accuracy in all things
 
-        print("ESTIMATED WORST-CASE TIMES:")
-        worstTime = timedelta(seconds=int(seconds))
-        print(f"Time: {worstTime}")
-        print(f"Time in seconds: {int(seconds)}s")
-        print("Running after a cache has been established will accelerate refreshes")
-        print("Cache is updated continuously, so immediately resuming the refresh later will pick up roughly where you left off")
+#        print("ESTIMATED WORST-CASE TIMES:")
+#        worstTime = timedelta(seconds=int(seconds))
+#        print(f"Time: {worstTime}")
+#        print(f"Time in seconds: {int(seconds)}s")
+#        print("Running after a cache has been established will accelerate futu refreshes")
         print("Press Ctrl-C at any time to interrupt the refresh")
+        print("Cache is updated continuously, so resuming the refresh later will pick up roughly where you left off")
 
         count = 0
         spinner = ["/","-","\\","|"]

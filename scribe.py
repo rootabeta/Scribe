@@ -10,9 +10,8 @@ from nsapi import math
 from nationcache import Cache
 from datetime import datetime
 
-# No easy frontend for you, we hardcode this sucka
 # Easy frontend - just pass it our starting conditions, and it will return a procedure to get there.
-# from reachstate import EndState
+from reachstate import EndState
 
 def easyTime(timestamp):
     if timestamp:
@@ -82,7 +81,7 @@ def main(args):
     # Set our desired state. It will give us a recipe containing firing plans
     state = EndState(cache, allNations, WANations, nonWANations, regionInfo, not args.locked, not args.lock_only)
     state.generateRecipes()
-    result = state.pickBest()
+#    result = state.evaluate()
 
 ### INIT + OPTS
 

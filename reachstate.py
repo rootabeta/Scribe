@@ -1,8 +1,7 @@
 from nsapi import math
 
-
 class Hitlist():
-    def __init__(self, nation, cutoff=0, ban=False, delegate=False):
+    def __init__(self, nation, cutoff=0, ban=True, delegate=False):
         self.nation = nation
         self.name = nation.name
 
@@ -28,7 +27,6 @@ class Hitlist():
         print(f"|-   Influence consumed: {self.consumedInfluence}")
         print(f"|-      Final influence: {self.startingInfluence - self.consumedInfluence}")
         print(f"|-      Influence floor: {self.cutoff}")
-        print(f"|-    This RO sets pass: {'YES' if self.passworder else 'No'}")
         if verbose:
             print(f"|- Target list: ")
             # Starting at the top, now we're here
@@ -174,11 +172,196 @@ class FiringSolution():
     def makeReport(self):
         pass
 
+class Transitions:
+    modes = ["nofuture","semifuture","future"]
 
-class Recipe(self, State, passMode=0, transMode=0):
-    def __init__(self):
-        self.password = None
-        self.transition = None
+    def generateAll(startState):
+        allTransitions = []
+        for mode in Transitions.modes:
+            transition = Transitions.Transition(startState, mode=mode)
+            if transition:
+                allTransitions.append(transition)
+
+        return allTransitions
+
+    class Transition():
+        def __init__(self, startState, mode="nofuture"):
+            self.startState = startState
+            self.mode = mode
+
+            # Firing solution chosen by the given mode
+            self.firingSolution = None
+            # Will get steadily modified as the desired mode is done
+            self.endState = self.startState 
+
+            # NOOP
+            if mode == "none":
+                self.firingSolution = None
+                self.endState = self.startState 
+
+            elif mode == "nofuture":
+                self.nofuture()
+
+            elif mode == "semifuture":
+                self.semifuture()
+
+            elif mode == "nofuture":
+                self.semifuture()
+
+        def nofuture(self):
+            
+            return
+
+        def semifuture(self):
+
+            return
+
+        def future(self):
+
+            return
+
+        def getMode(self):
+            return self.mode
+
+        def getSolution(self):
+            # The firing solution that will make this so
+            return self.firingSolution
+
+        def getState(self):
+            # The resultant state of executing self.firingSolution
+            return self.endState
+
+class Passwords:
+    modes = ["nofuture","semifuture","future","nofuture_noex","semifuture_noex","future_noex"]
+
+    # Generate all firing solutions
+    def generateAll(startState):
+        allPasswords = []
+        for mode in Passwords.modes:
+            # generates an end state
+            password = Passwords.Password(startState, mode=mode)
+            if password:
+                allPasswords.append(password)
+
+        return allPasswords
+
+    class Password():
+        def __init__(self, startState, mode="nofuture_noex", passworder=None):
+            self.mode = mode
+            self.startState = startState
+
+            # Special feature - who will do the passwording?
+            self.passworder = passworder
+
+            # List of who is banned in what order by whom
+            self.firingSolution = None
+            # Used to determine next phase starting conditions
+            self.endState = self.startState
+
+            if mode == "none":
+                self.firingSolution = None
+                self.endState = self.startState
+
+            # Each sets
+            # self.firingSolution
+            # self.endState
+            elif mode == "nofuture":
+                self.nofuture()
+
+            elif mode == "semifuture":
+                self.semifuture()
+
+            elif mode == "future":
+                self.future()
+
+            elif mode == "nofuture_noex":
+                self.nofuture_noex()
+
+            elif mode == "semifuture_noex":
+                self.semifuture_noex()
+
+            elif mode == "future_noex":
+                self.future_noex()
+
+        # O.G. algorithms, EXCEPT that anyone endorsing
+        # the delegate or at least one officer is exempt
+        def nofuture(self):
+
+            return
+
+        def semifuture(self):
+
+            return
+
+        def future(self):
+
+            return
+
+        # O.G. algorithms
+        # We can do silly things like eject our own endorsers,
+        # Because we can predict how this will affect us later
+        # when we evaluate the resulting costs
+        def nofuture_noex(self):
+
+            return
+
+        def semifuture_noex(self):
+
+            return
+
+        def future_noex(self):
+
+            return
+
+        def getMode(self):
+            return self.mode
+
+        def getSolution(self):
+            # The firing solution that will make this so
+            return self.firingSolution
+
+        def getState(self):
+            # The resultant state of executing self.firingSolution
+            return self.endState
+
+# Just keeps the passwords and transitions nice and neatly organized together
+class Recipe():
+    def __init__(self, State, password=None, transition=None):
+        self.startState = State
+        self.endState = State
+    
+        self.password = password
+        self.transition = transition
+
+        if self.transition:
+            self.endState = self.transition.getState()
+        elif self.password:
+            self.endState = self.password.getState()
+        else:
+            self.endState = None
+
+    def show(self):
+        if self.password: 
+            P = self.password.getMode()
+        else:
+            P = "XP"
+
+        if self.transition:
+            T = self.transition.getMode()
+        else:
+            T = "XT"
+
+        print(f"{P} -> {T}")
+
+
+    def getState():
+        return self.endState
+
+    def getPass():
+        return self.password
+
+    def getTrans():
+        return self.transition
 
 # The state of a region at any point in time. 
 # Used to evaluate different firing solutions.
@@ -190,7 +373,7 @@ class State():
         self.delegateName = regionInfo.delegate
         self.RONames = regionInfo.BCROnames
         
-        self.passwordCost = math.transition(len(self.nations))
+        self.passwordCost = math.password(len(self.nations))
         self.transitionCost = math.transition(len(self.WANations), len(self.nonWANations))
 
         self.ROs = []
@@ -222,11 +405,46 @@ class EndState():
         self.startState = State(self.regionInfo, self.allNations, self.WANations, self.nonWANations)
         self.recipes = []
 
+        self.passwords = []
+        self.transitions = []
+
     # Generate a recipe for each strategy we know
     def generateRecipes(self):
-        pass
+        recipes = []
+
+        # We want a password
+        if self.doPassword:
+            passwords = Passwords.generateAll(self.startState)
+
+            # For each of these passwords,
+            # If there is a firing solution...
+            for password in passwords:
+                # Make a transition plan based on the password plan we just ran
+                if self.doTransition:
+                    transitions = Transitions.generateAll(password.getState())
+                    for transition in transitions:
+                        recipes.append(Recipe(self.startState, password, transition))
+
+                # No need to transition, mission accomplished
+                elif not self.doTransition:
+                    recipes.append(Recipe(self.startState, password, None))
+
+
+        # We want transition only, no password
+        elif self.doTransition:
+            transitions = Transitions.generateAll(self.startState)
+            for transition in transitions:
+                recipes.append(Recipe(self.startState, None, transition))
+
+        # These are all the different routes we could take!
+
+#        for recipe in recipes:
+#            recipe.show()
+
+        return recipes
 
     # Of all the recipes we have chosen, which one accomplishes the goal best, or at least at all?
-    def pickBest(self):
+    # Chosen by fastest route to victory
+    def evaluate(self):
         pass
 
