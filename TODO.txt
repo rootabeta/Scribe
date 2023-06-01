@@ -1,0 +1,9 @@
+- Ensure that removing an endorser removes their endorsements from other nations
+- Ensure that RO+del endorsers are exempted in !noex strats
+- Test out other passworder selection algorithms (e.g. minimum price?)
+- Add in transition forecasting
+- Add in evaluation
+- Add in delay algorithm
+- Add in multiple ban waves + influence building
+- Add in ability to fast-forward an endState
+- Add time-crunch into evaluation

@@ -141,6 +141,7 @@ parser.add_argument(
 
 parser.add_argument(
     "--fast-forward",
+    "--forecast",
     action="store",
     help="estimate a certain of updates in the future, instead of now",
     type=int,
