@@ -6,7 +6,7 @@ import gzip
 from defusedxml import ElementTree as ET
 import sqlite3
 
-from nsapi import math
+from nsapi import math, standardize
 from nationcache import Cache
 from datetime import datetime
 
@@ -72,13 +72,29 @@ def main(args):
         # Manually rebuild nationcache with forecasting
         cache.fastForward(args.fast_forward) 
 
-
     allNations, WANations, nonWANations = cache.fetchNationLists()
     regionInfo = cache.fetchRegionInfo() # Useful things like who is RO or delegate
 
+    if args.houndsofwar:
+        for hound in args.houndsofwar:
+            if standardize(hound) not in regionInfo.BCROnames:
+                regionInfo.BCROnames.append(hound)
+
+    if args.objectors:
+        for objector in args.objectors:
+            if standardize(objector) in regionInfo.BCROnames:
+                regionInfo.BCROnames.remove(objector)
+
+    if args.objectors or args.houndsofwar:
+        print("Tampered with BCRO list.")
+        print(regionInfo.BCROnames)
+
+    print()
+
     print(f"Current estimated cost to password:  {math.password(len(allNations))}")
     print(f"Current estimated cost to transition: {math.transition(len(WANations), len(nonWANations))}")
-
+    print("Commencing target calculation")
+    print()
     # Set our desired state. It will give us a recipe containing firing plans
     state = EndState(cache, allNations, WANations, nonWANations, regionInfo, not args.locked, not args.lock_only)
     state.generateRecipes()
@@ -104,14 +120,23 @@ parser.add_argument(
     dest="mainNation",
 )
 
-#parser.add_argument(
-#    "--exempt",
-#    action="store",
-#    help="BCROs who will not be purging",
-#    metavar="nation",
-#    default=None,
-#    nargs="*",
-#)
+parser.add_argument(
+    "--houndsofwar",
+    action="store",
+    help="non-BCROs who will be appointed before a purge",
+    metavar="nation",
+    default=None,
+    nargs="*",
+)
+
+parser.add_argument(
+    "--objectors",
+    action="store",
+    help="BCROs who will not be purging",
+    metavar="nation",
+    default=None,
+    nargs="*",
+)
 
 parser.add_argument(
     "--passworder",

@@ -39,6 +39,9 @@ class Nation(): # This is a frontend to the database which acts as a cache betwe
     # This is a JSON string when packed into the database, but an array at all other times
     endorsers = ""
 
+    def __str__(self):
+        return name
+
 
 class Region():
     name = ""
