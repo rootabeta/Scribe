@@ -2,231 +2,239 @@ from math import ceil
 from copy import deepcopy
 from nsapi import math, standardize, standardize
 from random import random, randint
+from targeting import Hitlist, FiringSolution
 
-class Hitlist():
-    def __init__(self, nation, cutoff=0, ban=True, delegate=False):
-        self.nation = nation
-        self.name = nation.name
-
-        self.delegate = delegate
-        self.startingInfluence = int(nation.influence)
-        # How much must this person stay above?
-        self.cutoff = cutoff
-
-        self.remainingInfluence = self.startingInfluence
-        self.consumedInfluence = 0
-
-        self.ban = ban
-
-        # Target list. Plain nation name.
-        # In sorted order by influence - largest inf first
-        # This is done during parcelling of a firing solution to hitlists
-        self.targets = []
-
-    def report(self, makeCSV=True, verbose=True):
-        print(f"[*] Purge list for {self.name}")
-        print(f"|- Ban or Eject Targets: {'BAN' if self.ban else 'EJECT'}")
-        print(f"|-   Starting influence: {self.startingInfluence}")
-        print(f"|-   Influence consumed: {self.consumedInfluence}")
-        print(f"|-      Final influence: {self.startingInfluence - self.consumedInfluence}")
-        print(f"|-      Influence floor: {self.cutoff}")
-        if verbose:
-            print(f"|- Target list: ")
-            # Starting at the top, now we're here
-            for target in self.targets:
-                print(target)
-
-        if makeCSV:
-            self.makeCSV()
-
-    def estimateDeficit(self, influence):
-        # How much do we need to banject?
-        cost = self.estimateCost(influence)
-        
-        # How much do I have to play with?
-        remaining = self.remainingInfluence - self.cutoff
-
-        # I need 5 and I have 4 - I need 1 more. 
-        return cost - remaining
-
-    def estimateCost(self, influence):
-        # Ban, as non-del and del
-        if self.ban and not self.delegate:
-            cost = math.RObanject(influence)
-        elif self.ban and self.delegate:
-            cost = math.DELbanject(influence)
-
-        # Eject, as non-del and del
-        elif not self.ban and not self.delegate:
-            cost = math.ROeject(influence)
-        elif not self.ban and self.delegate:
-            cost = math.DELeject(influence)
-
-        cost = int(ceil(cost))
-
-#        print(f"/ {self.name} has {self.remainingInfluence} after expending {self.consumedInfluence} from {self.startingInfluence}")
-#        print(f"| Additionally, they must stay above {self.cutoff}")
-#        print(f"| They have {self.remainingInfluence - self.cutoff} left to spend")
-#        print(f"| Banning this target would consume {cost}")
-#        if cost < self.remainingInfluence - self.cutoff:
-#            print("\ They CAN ban this one")
+#class Hitlist():
+#    def __init__(self, nation, cutoff=0, ban=True, delegate=False):
+#        self.nation = nation
+#        self.name = nation.name
+#
+#        self.delegate = delegate
+#        self.startingInfluence = int(nation.influence)
+#
+#        # How much must this person stay above?
+#        self.cutoff = cutoff
+#
+#        self.remainingInfluence = self.startingInfluence
+#        self.consumedInfluence = 0
+#
+#        self.ban = ban
+#
+#        # Target list. Plain nation name.
+#        # In sorted order by influence - largest inf first
+#        # This is done during parcelling of a firing solution to hitlists
+#        self.targets = []
+#
+#    def report(self, makeCSV=True, verbose=True):
+#        print(f"[*] Purge list for {self.name}")
+#        print(f"|- Ban or Eject Targets: {'BAN' if self.ban else 'EJECT'}")
+#        print(f"|-   Starting influence: {self.startingInfluence}")
+#        print(f"|-   Influence consumed: {self.consumedInfluence}")
+#        print(f"|-      Final influence: {self.startingInfluence - self.consumedInfluence}")
+#        print(f"|-      Influence floor: {self.cutoff}")
+#        if verbose:
+#            print(f"|- Target list: ")
+#            # Starting at the top, now we're here
+#            for target in self.targets:
+#                print(target)
+#
+#        if makeCSV:
+#            self.makeCSV()
+#
+#    def estimateDeficit(self, influence):
+#        # How much do we need to banject?
+#        cost = self.estimateCost(influence)
+#        
+#        # How much do I have to play with?
+#        remaining = self.remainingInfluence - self.cutoff
+#
+#        # I need 5 and I have 4 - I need 1 more. 
+#        return cost - remaining
+#
+#    def estimateCost(self, influence):
+#        # Ban, as non-del and del
+#        if self.ban and not self.delegate:
+#            cost = math.RObanject(influence)
+#        elif self.ban and self.delegate:
+#            cost = math.DELbanject(influence)
+#
+#        # Eject, as non-del and del
+#        elif not self.ban and not self.delegate:
+#            cost = math.ROeject(influence)
+#        elif not self.ban and self.delegate:
+#            cost = math.DELeject(influence)
+#
+#        cost = int(ceil(cost))
+#
+##        print(f"/ {self.name} has {self.remainingInfluence} after expending {self.consumedInfluence} from {self.startingInfluence}")
+##        print(f"| Additionally, they must stay above {self.cutoff}")
+##        print(f"| They have {self.remainingInfluence - self.cutoff} left to spend")
+##        print(f"| Banning this target would consume {cost}")
+##        if cost < self.remainingInfluence - self.cutoff:
+##            print("\ They CAN ban this one")
+##        else:
+##            print("\ They CANNOT ban this one")
+##
+##        print()
+#
+#        return cost
+#
+#    def canHit(self, influence):
+#        cost = self.estimateCost(influence)
+#        # At least one inf to spare, just in case
+#        if cost < (self.remainingInfluence - self.cutoff):
+#            # Return the prediction of how much influence we'd have left
+#            return int((self.remainingInfluence - self.cutoff)) - ceil(cost)
 #        else:
-#            print("\ They CANNOT ban this one")
+#            # We cannot hit this one
+#            return -1
 #
-#        print()
-
-        return cost
-
-    def canHit(self, influence):
-        cost = self.estimateCost(influence)
-        # At least one inf to spare, just in case
-        if cost < (self.remainingInfluence - self.cutoff):
-            # Return the prediction of how much influence we'd have left
-            return int((self.remainingInfluence - self.cutoff)) - ceil(cost)
-        else:
-            # We cannot hit this one
-            return -1
-
-    def addTarget(self, target):
-        estCost = self.estimateCost(target.influence)
-        self.consumedInfluence += estCost
-        self.remainingInfluence -= estCost
-        self.targets.append(target)
-
-    def makeCSV(self):
-        pass
-
-class FiringSolution():
-    # The target list - unparcelled to given ROs. 
-    def __init__(self, hitlists = {}):
-        self.targets = []
-
-        # The total influence cost of executing this firing solution
-        self.cost = 0 
-    
-        # Each RO gets a hitlist of targets in the order they are to be sacrificed to the Overseer
-        # The hitlist will also specify whether they are to banned or ejected
-        # These hitlists are populated via taking the next target from targets after population, 
-        # deciding whom to assign it to, and appending that target to that ROs hitlist. 
-        # When all targets have been distributed, the hitlists are ready to be sent out to each
-        # RO - this is done when the makeReport() function is invoked in the FiringSolution
-        # method. It will generate CSVs and terminal reports on who will banject/eject whom when.
-        # Hitlists are stored as dicts with the RO's nation name being the key
-
-        # Simulated state of the region - including officer/del influence and remaining nations
-        self.remainingNonWA = []
-        self.remainingWA = []
-        self.remainingNations = []
-
-        # Accept a hitlist from on high, all we need to do is populate it
-        self.hitlists = hitlists
-        # resultingData = None
-
-        self.total = 0
-        self.failed = 0
-
-        self.failure = False
-
-    # Add someone we want GONE
-    def addTarget(self, target): #), influence, isWA):
-        self.cost += target.influence
-        self.targets.append(target)
-
-    # Get the cost of this evil ploy
-    def getCost(self):
-        return self.cost
-
-    def setHitlists(self, hitlists):
-        self.hitlists = hitlists
-
-    def getFailed(self):
-        return self.targets[::-1][self.failed:]
-
-    def buildFiringSolution(self, reverse=True):
-        # We wanna ban every last one of these
-        # They got appended small->large
-        # We wanna go large->small when parcelling out
-        # So, invert list order and start with the big bads
-
-        #skipped = []
-        processed = 0
-        infConsumed = 0
-
-        total = len(self.targets)
-        self.total = total
-        deficits = {}
-        for ROname in self.hitlists.keys():
-            # How much MORE influence do we need?
-            deficits[ROname] = 0
-
-        for target in self.targets[::-1]:
-            # Fetch each nation's hitlist
-
-            offers = []
-
-            for ROname in self.hitlists.keys():
-                RO = self.hitlists[ROname]
-                offer = RO.canHit(target.influence)
-                if offer > 0:
-                    offers.append((ROname, offer))
-                    infConsumed += offer
-            
-            # Seek who is closest to getting soaked up exactly
-            # Well shiiiit, nobody is offering. Let's just try for funsies.
-            if not offers:
-               # print(f"Error: We have run out of influence! Processed {processed}/{total}")
-               # print(f"Died trying to banject {target.name}")
-               # print(f"Influence consumed: {infConsumed}")
-
-                self.failure = True
-                self.failed = processed
-                eviloffers = []
-
-                for ROname in self.hitlists.keys():
-                    RO = self.hitlists[ROname]
-
-                    # Can't hit. How much do we need to make it happen?
-                    if RO.canHit(target.influence) == -1:
-                        eviloffer = RO.estimateDeficit(target.influence) + deficits[ROname]
-#                        print(ROname, eviloffer)
-                        eviloffers.append((ROname, eviloffer))
-
-                    # Who has the smallest deficit?
-
-                if eviloffers:
-                    hitman = min(eviloffers, key=lambda x: x[1])
-
-                    deficits[hitman[0]] = hitman[1] #+= hitman[1]
-
-#                    self.hitlists[hitman[0]].addTarget(target)
+#    def addTarget(self, target):
+#        estCost = self.estimateCost(target.influence)
+#        self.consumedInfluence += estCost
+#        self.remainingInfluence -= estCost
+#        self.targets.append(target)
 #
-#                return False
-                else:
-                    print("Well that can't be right")
-
-            else:
-                # Who is closest?
-                hitman = min(offers, key=lambda x: x[1])
-                self.hitlists[hitman[0]].addTarget(target)
-                #print(f"{hitman[0]} will take {target.name}, leaving them with {self.hitlists[hitman[0]].remainingInfluence} influence to spare ({self.hitlists[hitman[0]].consumedInfluence} used of {self.hitlists[hitman[0]].startingInfluence} and a floor of {self.hitlists[hitman[0]].cutoff})")
-
-                processed+=1
-
-        if deficits and [ro for ro in deficits.keys() if int(deficits[ro]) > 0] != []:
-            print("********************************")
-            print(" /!\\ INSUFFICIENT INFLUENCE /!\\")
-            print("********************************")
-            print(f"Successfully processed {processed}")
-            for key in deficits.keys():
-                print(f"{key} is short by {deficits[key]} influence")
-
-        if not self.failure:
-            return True
-        else:
-            return False
-
-    def makeReport(self):
-        pass
+#    def makeCSV(self):
+#        pass
+#
+#class FiringSolution():
+#    # The target list - unparcelled to given ROs. 
+#    def __init__(self, hitlists = {}):
+#        self.targets = []
+#
+#        # The total influence cost of executing this firing solution
+#        self.cost = 0 
+#    
+#        # Each RO gets a hitlist of targets in the order they are to be sacrificed to the Overseer
+#        # The hitlist will also specify whether they are to banned or ejected
+#        # These hitlists are populated via taking the next target from targets after population, 
+#        # deciding whom to assign it to, and appending that target to that ROs hitlist. 
+#        # When all targets have been distributed, the hitlists are ready to be sent out to each
+#        # RO - this is done when the makeReport() function is invoked in the FiringSolution
+#        # method. It will generate CSVs and terminal reports on who will banject/eject whom when.
+#        # Hitlists are stored as dicts with the RO's nation name being the key
+#
+#        # Simulated state of the region - including officer/del influence and remaining nations
+#        self.remainingNonWA = []
+#        self.remainingWA = []
+#        self.remainingNations = []
+#
+#        # Accept a hitlist from on high, all we need to do is populate it
+#        self.hitlists = hitlists
+#        # resultingData = None
+#
+#        self.total = 0
+#        self.failed = 0
+#
+#        self.failure = False
+#
+#    # Add someone we want GONE
+#    def addTarget(self, target): #), influence, isWA):
+#        self.cost += target.influence
+#        self.targets.append(target)
+#
+#    # Get the cost of this evil ploy
+#    def getCost(self):
+#        return self.cost
+#
+#    def setHitlists(self, hitlists):
+#        self.hitlists = hitlists
+#
+#    def getFailed(self):
+#        return self.targets[::-1][self.failed:]
+#
+#    def buildFiringSolution(self, reverse=True):
+#        # We wanna ban every last one of these
+#        # They got appended small->large
+#        # We wanna go large->small when parcelling out
+#        # So, invert list order and start with the big bads
+#
+#        #skipped = []
+#        processed = 0
+#        infConsumed = 0
+#
+#        total = len(self.targets)
+#        self.total = total
+#        deficits = {}
+#        for ROname in self.hitlists.keys():
+#            # How much MORE influence do we need?
+#            deficits[ROname] = 0
+#
+#        for target in sorted(self.targets, key=lambda x:x.influence)[::-1]:
+#            # Fetch each nation's hitlist
+#
+#            offers = []
+#            print(f"Handling {target.name}")
+#
+#            for ROname in self.hitlists.keys():
+#                RO = self.hitlists[ROname]
+#                # How much will it cost?
+#                offer = RO.canHit(target.influence)
+#
+#                # How much will be free after?
+#                offer = (RO.remainingInfluence - RO.cutoff) - offer
+#
+#                if offer > 1:
+#                    offers.append((ROname, offer))
+#                    infConsumed += offer
+#            
+#            # Seek who is closest to getting soaked up exactly
+#            # Well shiiiit, nobody is offering. Let's just try for funsies.
+#            if not offers:
+#               # print(f"Error: We have run out of influence! Processed {processed}/{total}")
+#               # print(f"Died trying to banject {target.name}")
+#               # print(f"Influence consumed: {infConsumed}")
+#
+#                self.failure = True
+#                self.failed = processed
+#                eviloffers = []
+#
+#                for ROname in self.hitlists.keys():
+#                    RO = self.hitlists[ROname]
+#
+#                    # Can't hit. How much do we need to make it happen?
+#                    if RO.canHit(target.influence) == -1:
+#                        eviloffer = RO.estimateDeficit(target.influence) + deficits[ROname]
+##                        print(ROname, eviloffer)
+#                        eviloffers.append((ROname, eviloffer))
+#
+#                    # Who has the smallest deficit?
+#
+#                if eviloffers:
+#                    hitman = min(eviloffers, key=lambda x: x[1])
+#
+#                    deficits[hitman[0]] = hitman[1] #+= hitman[1]
+#
+##                    self.hitlists[hitman[0]].addTarget(target)
+##
+##                return False
+#                else:
+#                    print("Well that can't be right")
+#
+#            else:
+#                # Who is closest?
+#                hitman = min(offers, key=lambda x: x[1])
+#                print(f"[{processed}/{total}] {hitman[0]} ({self.hitlists[hitman[0]].remainingInfluence}) will take {target.name} ({target.influence} inf), leaving them with {self.hitlists[hitman[0]].remainingInfluence} influence to spare ({self.hitlists[hitman[0]].consumedInfluence} used of {self.hitlists[hitman[0]].startingInfluence} and a floor of {self.hitlists[hitman[0]].cutoff})")
+#                self.hitlists[hitman[0]].addTarget(target)
+#
+#                processed+=1
+#
+#        if deficits and [ro for ro in deficits.keys() if int(deficits[ro]) > 0] != []:
+#            print("********************************")
+#            print(" /!\\ INSUFFICIENT INFLUENCE /!\\")
+#            print("********************************")
+#            print(f"Successfully processed {processed}")
+#            for key in deficits.keys():
+#                print(f"{key} is short by {deficits[key]} influence")
+#
+#        if not self.failure:
+#            return True
+#        else:
+#            return False
+#
+#    def makeReport(self):
+#        pass
 
 class Transitions:
     modes = ["nofuture","semifuture","future"]
@@ -369,6 +377,7 @@ class Passwords:
                 passworder = min(canPassword, key=lambda x: x.influence)
                 print(f"Passworder selected: {passworder.name} ({passworder.influence} influence)")
                 print(f"Passworder HAS sufficient influence! No purge necessary! Cost is {self.endState.getCosts()[0]}")
+                print()
                 # Empty...
                 return self.firingSolution
             else:
@@ -465,6 +474,7 @@ class Passwords:
                 passworder = min(canPassword, key=lambda x: x.influence)
                 print(f"Passworder selected: {passworder.name} ({passworder.influence} influence)")
                 print(f"Passworder HAS sufficient influence! No purge necessary! Cost is {self.endState.getCosts()[0]}")
+                print()
                 # Empty...
                 return self.firingSolution
             else:
@@ -493,7 +503,7 @@ class Passwords:
                 # Otherwise, they are the lowest on the totem pole! Make em go away.
                 else:
                     target = targets.pop(mindex)
-                    #print(f"Hitting {target.name}")
+#                    print(f"Hitting {target.name}")
                     self.firingSolution.addTarget(target)
                     self.endState.remove(target.name)
 
@@ -556,6 +566,7 @@ class Passwords:
                 passworder = min(canPassword, key=lambda x: x.influence)
                 print(f"Passworder selected: {passworder.name} ({passworder.influence} influence)")
                 print(f"Passworder HAS sufficient influence! No purge necessary! Cost is {self.endState.getCosts()[0]}")
+                print()
                 # Empty...
                 return self.firingSolution
             else:

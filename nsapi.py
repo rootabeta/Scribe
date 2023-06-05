@@ -319,7 +319,7 @@ class API():
             nationinfo.isDel = False
         
         # 5 - Last login
-        nationinfo.lastlogin = int(nationData.findtext("LASTLOGIN"))
+        nationinfo.daysSinceLogin = int(nationData.findtext("LASTLOGIN"))
 
         # 6 - Days resident in region
         nationinfo.residency = float(

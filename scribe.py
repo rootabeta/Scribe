@@ -85,14 +85,6 @@ def main(args):
             if standardize(objector) in regionInfo.BCROnames:
                 regionInfo.BCROnames.remove(objector)
 
-    if args.ghosts:
-        print("G-G-G-G-Ghosts!")
-        for ghost in args.ghosts:
-            if standardize(ghost) in regionInfo.WAnations:
-                regionInfo.WAnations.remove(standardize(ghost))
-            elif standardize(ghost) in regionInfo.nonWAnations:
-                regionInfo.nonWAnations.remove(standardize(ghost))
-
     if args.objectors or args.houndsofwar:
         print("Tampered with BCRO list.")
         print(regionInfo.BCROnames)
@@ -146,14 +138,14 @@ parser.add_argument(
     nargs="*",
 )
 
-parser.add_argument(
-    "--ghosts",
-    action="store",
-    help="people who will leave of their own volition",
-    metavar="nation",
-    default=None,
-    nargs="*",
-)
+#parser.add_argument(
+#    "--ghosts",
+#    action="store",
+#    help="people who will leave of their own volition",
+#    metavar="nation",
+#    default=None,
+#    nargs="*",
+#)
 
 parser.add_argument(
     "--passworder",

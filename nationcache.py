@@ -28,7 +28,37 @@ class Cache():
         # Build nationlists
         self.buildNationLists()
 
-    def fastForward(self, updates):
+    # Handy, but... I don't think this is what I meant to do.
+    def remove(self, name):
+        index = 0
+        for nation in self.nationList:
+            if nation.name == name:
+                del(self.nationList[index])
+                break
+            index+=1
+    
+        index = 0
+        for nation in self.nationListWA:
+            if nation.name == name:
+                del(self.nationListWA[index])
+                break
+            index+=1
+    
+        index = 0
+        for nation in self.nationListNonWA:
+            if nation.name == name:
+                del(self.nationListNonWA[index])
+                break
+            index+=1
+
+    def fastForward(self, updates, doCTE=False):
+        vacation = 32 * 24 * 60 * 60
+        CTE = 28 * 24 * 60 * 60
+        frequentFlier = 7 * 24 * 60 * 60
+        perUpd = 12 * 60 * 60
+
+        now = int(datetime.now().timestamp())
+
         # Go through cache and build nation list
         # DOES NOT make requests
 
@@ -44,11 +74,20 @@ class Cache():
 
             influenceAdjustment = len(nationData.endorsers) 
             influenceAdjustment += 1
+            
 
             nationData.influence += (influenceAdjustment * updates)
 
-            self.nationList.append(nationData)
-            self.nationListWA.append(nationData)
+            willCTE = False
+            # Been more than FrequentFlier days since we last saw him, but not in vacation mode
+            if now - nationData.daysSinceLogin > frequentFlier and now - nationData.daysSinceLogin < vacation:
+                if now - (nationData.daysSinceLogin + (perUpd * updates)) > CTE:
+                    print(f"Nation {nationData.name} will CTE")
+                    willCTE = True
+
+            if not doCTE or not willCTE:
+                self.nationList.append(nationData)
+                self.nationListWA.append(nationData)
 
         for nation in self.regionData.nonWAnations:
             nationData = self.fetch_nation_cached(nation)
@@ -60,8 +99,14 @@ class Cache():
 
             nationData.influence += influenceAdjustment * updates
 
-            self.nationList.append(nationData)
-            self.nationListNonWA.append(nationData)
+            if now - nationData.daysSinceLogin > frequentFlier and now - nationData.daysSinceLogin < vacation:
+                if now - (nationData.daysSinceLogin + (perUpd * updates)) > CTE:
+                    print(f"Nation {nationData.name} will CTE")
+                    willCTE = True
+
+            if not doCTE or not willCTE:
+                self.nationList.append(nationData)
+                self.nationListNonWA.append(nationData)
 
         self.nationList = sorted(self.nationList, key=lambda x: x.influence)
         self.nationListWA = sorted(self.nationListWA, key=lambda x: x.influence)
