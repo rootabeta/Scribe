@@ -438,7 +438,8 @@ class Passwords:
                         hitlists[RO.name] = Hitlist(RO)
 
                 if delegate:
-                    hitlists[delegate.name] = Hitlist(delegate, cutoff=ceil(self.endState.getCosts()[1]))
+                    hitlists[delegate.name] = Hitlist(delegate, cutoff=0, delegate=True)
+                    #hitlists[delegate.name] = Hitlist(delegate, cutoff=ceil(self.endState.getCosts()[1]), delegate=True)
 
                 self.firingSolution.setHitlists(hitlists)
                 if self.firingSolution.buildFiringSolution():
@@ -531,7 +532,8 @@ class Passwords:
                         hitlists[RO.name] = Hitlist(RO)
 
                 if delegate:
-                    hitlists[delegate.name] = Hitlist(delegate, cutoff=ceil(self.endState.getCosts()[1]))
+                    hitlists[delegate.name] = Hitlist(delegate, cutoff=0, delegate=True)
+                    #hitlists[delegate.name] = Hitlist(delegate, cutoff=ceil(self.endState.getCosts()[1]), delegate=True)
 
                 self.firingSolution.setHitlists(hitlists)
                 if self.firingSolution.buildFiringSolution():
@@ -665,7 +667,8 @@ class Passwords:
                         hitlists[RO.name] = Hitlist(RO)
 
                 if delegate:
-                    hitlists[delegate.name] = Hitlist(delegate, cutoff=ceil(self.endState.getCosts()[1]))
+                    hitlists[delegate.name] = Hitlist(delegate, cutoff=0, delegate=True)
+                    #hitlists[delegate.name] = Hitlist(delegate, cutoff=ceil(self.endState.getCosts()[1]), delegate=True)
 
                 self.firingSolution.setHitlists(hitlists)
                 if self.firingSolution.buildFiringSolution():
@@ -823,7 +826,7 @@ class State():
 # In return, it will take this data, and compute for us
 # A way to do it ASAP.
 class EndState():
-    def __init__(self, cache, allNations, WANations, nonWANations, regionInfo, doPassword, doTransition):
+    def __init__(self, cache, allNations, WANations, nonWANations, regionInfo, doPassword, doTransition, ghosts=[], safe=[]):
         self.cache = cache
         self.allNations = allNations
         self.WANations = WANations
@@ -832,6 +835,12 @@ class EndState():
         self.doPassword = doPassword
         self.doTransition = doTransition
         self.startState = State(self.regionInfo, self.allNations, self.WANations, self.nonWANations)
+
+        # Remove ghosts from the startState
+        if ghosts:
+            for ghost in ghosts:
+                self.startState.remove(standardize(ghost))
+
         self.recipes = []
 
         self.passwords = []

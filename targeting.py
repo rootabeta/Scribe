@@ -17,7 +17,7 @@ class Hitlist():
              cutoff=0, 
              banEnabled=True, 
              delegate=False, 
-             chooseEjection = False
+             chooseEjection = True
     ):
         self.ready = False
 
@@ -170,8 +170,9 @@ class FiringSolution():
                 skipped += 1
                 failure = True
 
-                minHelp = min(failedStates, key=lambda x: x[1])
-                deficits[minHelp[0]] = minHelp[1]
+                if failedStates:
+                    minHelp = min(failedStates, key=lambda x: x[1])
+                    deficits[minHelp[0]] = minHelp[1]
 
                 continue
             else:
@@ -183,7 +184,7 @@ class FiringSolution():
                 # Autolevels nicely too
                 bestOffer = max(sorted(predictedStates, key=lambda x: x[2]))
                 self.hitlists[bestOffer[0]].addTarget(target)
-#                print(f"{bestOffer[0]} will take {target.name}, leaving them with {bestOffer[2]} influence after spending {bestOffer[1]} (Ban: {bestOffer[3]})")
+                print(f"{bestOffer[0]} will take {target.name}, leaving them with {bestOffer[2]} influence after spending {bestOffer[1]} (Ban: {bestOffer[3]})")
         if failure:
             print()
             print("FS-ERROR: Failed to build firing solution fully")

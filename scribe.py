@@ -89,6 +89,10 @@ def main(args):
         print("Tampered with BCRO list.")
         print(regionInfo.BCROnames)
 
+    if args.ghosts:
+        print("G-G-G-G-Ghosts!")
+
+
     print()
 
     print(f"Current estimated cost to password:  {math.password(len(allNations))}")
@@ -96,7 +100,7 @@ def main(args):
     print("Commencing target calculation")
     print()
     # Set our desired state. It will give us a recipe containing firing plans
-    state = EndState(cache, allNations, WANations, nonWANations, regionInfo, not args.locked, not args.lock_only)
+    state = EndState(cache, allNations, WANations, nonWANations, regionInfo, not args.locked, not args.lock_only, ghosts=args.ghosts)
     state.generateRecipes()
 #    result = state.evaluate()
 
@@ -138,14 +142,23 @@ parser.add_argument(
     nargs="*",
 )
 
-#parser.add_argument(
-#    "--ghosts",
-#    action="store",
-#    help="people who will leave of their own volition",
-#    metavar="nation",
-#    default=None,
-#    nargs="*",
-#)
+parser.add_argument(
+    "--ghosts",
+    action="store",
+    help="nations that can be ignored, neither targetted nor factored into influence cost",
+    metavar="nation",
+    default=None,
+    nargs="*",
+)
+
+parser.add_argument(
+    "--safe",
+    action="store",
+    help="nations that will not be targetted in a purge",
+    metavar="nation",
+    default=None,
+    nargs="*",
+)
 
 parser.add_argument(
     "--passworder",
@@ -154,6 +167,7 @@ parser.add_argument(
     metavar="nation",
     default=None
 )
+
 
 #parser.add_argument(
 #    "--no-trans",
