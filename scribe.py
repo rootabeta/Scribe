@@ -94,15 +94,26 @@ def main(args):
 
 
     print()
-
-    print(f"Current estimated cost to password:  {math.password(len(allNations))}")
-    print(f"Current estimated cost to transition: {math.transition(len(WANations), len(nonWANations))}")
-    print("Commencing target calculation")
-    print()
-    # Set our desired state. It will give us a recipe containing firing plans
-    state = EndState(cache, allNations, WANations, nonWANations, regionInfo, not args.locked, not args.lock_only, ghosts=args.ghosts)
-    state.generateRecipes()
-#    result = state.evaluate()
+    if not args.chaos:
+        print(f"Current estimated cost to password:  {math.password(len(allNations))}")
+        print(f"Current estimated cost to transition: {math.transition(len(WANations), len(nonWANations))}")
+        print("Commencing target calculation")
+        print()
+        # Set our desired state. It will give us a recipe containing firing plans
+        state = EndState(cache, allNations, WANations, nonWANations, regionInfo, not args.locked, not args.lock_only, ghosts=args.ghosts)
+        state.generateRecipes()
+    #   result = state.evaluate()
+    else:
+        print("CHAOS MODE ENGAGED")
+        state = EndState(cache, allNations, WANations, nonWANations, regionInfo, False, False, ghosts=args.ghosts, chaos=True, chaosEjections=args.chaosject)
+        result = state.generateChaos()[0]
+        hitlists = result.firingSolution.hitlists
+        print()
+        for RO in hitlists.keys():
+            print(f"{RO} will hit the following: ")
+            for shot in hitlists[RO].hits:
+                print(f"{shot.target.name}")
+            print()
 
 ### INIT + OPTS
 
@@ -168,7 +179,6 @@ parser.add_argument(
     default=None
 )
 
-
 #parser.add_argument(
 #    "--no-trans",
 #    action="store_true",
@@ -194,6 +204,18 @@ parser.add_argument(
     help="estimate a certain of updates in the future, instead of now",
     type=int,
     default=0
+)
+
+parser.add_argument(
+    "--chaos",
+    help="throw all the future-proofing out the window and maximize bans",
+    action="store_true",
+)
+
+parser.add_argument(
+    "--chaosject",
+    help="in chaos mode, only eject. default: only ban",
+    action="store_true"
 )
 
 parser.add_argument(

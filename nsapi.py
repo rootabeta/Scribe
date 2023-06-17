@@ -341,12 +341,12 @@ class API():
 
         # Influence is too high for how many endos they have and how long they've been here
         # They are likely carrying influence from elsewhere. We will estimate it ourselves. 
-        if nationinfo.influence > (10 * (( len(nationinfo.endorsers) + nationinfo.residency) * 2)):
-            # This is the ceiling of where their influence is likely to be
-            nationinfo.influence = (nationinfo.residency + len(nationinfo.endorsers)) * 2 
-            nationinfo.influence *= 10 # Account for the possibility of endo loss. This is a ceiling measure, so bigger > smaller
-            nationinfo.infUnreliable = True # We had to manually guess at influence - we could be way over or under
-            # However, this value is a reasonable guess for an upper bound
+        #if nationinfo.influence > (10 * (( len(nationinfo.endorsers) + nationinfo.residency) * 2)):
+        #    # This is the ceiling of where their influence is likely to be
+        #    nationinfo.influence = (nationinfo.residency + len(nationinfo.endorsers)) * 2 
+        #    nationinfo.influence *= 10 # Account for the possibility of endo loss. This is a ceiling measure, so bigger > smaller
+        #    nationinfo.infUnreliable = True # We had to manually guess at influence - we could be way over or under
+        #    # However, this value is a reasonable guess for an upper bound
 
         return nationinfo
 

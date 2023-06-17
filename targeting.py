@@ -133,7 +133,7 @@ class FiringSolution():
     def setHitlists(self, hitlists):
         self.hitlists = hitlists
 
-    def buildFiringSolution(self):
+    def buildFiringSolution(self, invert=True, chaos=False):
         # Largest inf first
         toBeProcessed = len(self.targets)
         processed = 0
@@ -147,7 +147,13 @@ class FiringSolution():
             print(f"{hitman} -> {self.hitlists[hitman].remainingInfluence}")
             deficits[hitman] = 0
 
-        for target in sorted(self.targets, key=lambda x: x.influence)[::-1]:
+        # Greatest inf first!
+        if invert:
+            targetList = sorted(self.targets, key=lambda x: x.influence)[::-1]
+        else:
+            targetList = sorted(self.targets, key=lambda x: x.influence)
+
+        for target in targetList:
             predictedStates = []
             failedStates = []
 
@@ -167,6 +173,11 @@ class FiringSolution():
                         failedStates.append((hitman, deficits[hitman] + estimatedDebt))
 
             if not predictedStates:
+                # Quit once we reach the end of our ability
+                if chaos:
+                    print(f"CHAOS MODE ALLOWS EARLY ABORT: Removed {processed}/{toBeProcessed}")
+                    return True
+
                 skipped += 1
                 failure = True
 
@@ -184,7 +195,7 @@ class FiringSolution():
                 # Autolevels nicely too
                 bestOffer = max(sorted(predictedStates, key=lambda x: x[2]))
                 self.hitlists[bestOffer[0]].addTarget(target)
-                print(f"{bestOffer[0]} will take {target.name}, leaving them with {bestOffer[2]} influence after spending {bestOffer[1]} (Ban: {bestOffer[3]})")
+#                print(f"{bestOffer[0]} will take {target.name}, leaving them with {bestOffer[2]} influence after spending {bestOffer[1]} (Ban: {bestOffer[3]})")
         if failure:
             print()
             print("FS-ERROR: Failed to build firing solution fully")

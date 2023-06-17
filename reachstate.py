@@ -4,240 +4,8 @@ from nsapi import math, standardize, standardize
 from random import random, randint
 from targeting import Hitlist, FiringSolution
 
-#class Hitlist():
-#    def __init__(self, nation, cutoff=0, ban=True, delegate=False):
-#        self.nation = nation
-#        self.name = nation.name
-#
-#        self.delegate = delegate
-#        self.startingInfluence = int(nation.influence)
-#
-#        # How much must this person stay above?
-#        self.cutoff = cutoff
-#
-#        self.remainingInfluence = self.startingInfluence
-#        self.consumedInfluence = 0
-#
-#        self.ban = ban
-#
-#        # Target list. Plain nation name.
-#        # In sorted order by influence - largest inf first
-#        # This is done during parcelling of a firing solution to hitlists
-#        self.targets = []
-#
-#    def report(self, makeCSV=True, verbose=True):
-#        print(f"[*] Purge list for {self.name}")
-#        print(f"|- Ban or Eject Targets: {'BAN' if self.ban else 'EJECT'}")
-#        print(f"|-   Starting influence: {self.startingInfluence}")
-#        print(f"|-   Influence consumed: {self.consumedInfluence}")
-#        print(f"|-      Final influence: {self.startingInfluence - self.consumedInfluence}")
-#        print(f"|-      Influence floor: {self.cutoff}")
-#        if verbose:
-#            print(f"|- Target list: ")
-#            # Starting at the top, now we're here
-#            for target in self.targets:
-#                print(target)
-#
-#        if makeCSV:
-#            self.makeCSV()
-#
-#    def estimateDeficit(self, influence):
-#        # How much do we need to banject?
-#        cost = self.estimateCost(influence)
-#        
-#        # How much do I have to play with?
-#        remaining = self.remainingInfluence - self.cutoff
-#
-#        # I need 5 and I have 4 - I need 1 more. 
-#        return cost - remaining
-#
-#    def estimateCost(self, influence):
-#        # Ban, as non-del and del
-#        if self.ban and not self.delegate:
-#            cost = math.RObanject(influence)
-#        elif self.ban and self.delegate:
-#            cost = math.DELbanject(influence)
-#
-#        # Eject, as non-del and del
-#        elif not self.ban and not self.delegate:
-#            cost = math.ROeject(influence)
-#        elif not self.ban and self.delegate:
-#            cost = math.DELeject(influence)
-#
-#        cost = int(ceil(cost))
-#
-##        print(f"/ {self.name} has {self.remainingInfluence} after expending {self.consumedInfluence} from {self.startingInfluence}")
-##        print(f"| Additionally, they must stay above {self.cutoff}")
-##        print(f"| They have {self.remainingInfluence - self.cutoff} left to spend")
-##        print(f"| Banning this target would consume {cost}")
-##        if cost < self.remainingInfluence - self.cutoff:
-##            print("\ They CAN ban this one")
-##        else:
-##            print("\ They CANNOT ban this one")
-##
-##        print()
-#
-#        return cost
-#
-#    def canHit(self, influence):
-#        cost = self.estimateCost(influence)
-#        # At least one inf to spare, just in case
-#        if cost < (self.remainingInfluence - self.cutoff):
-#            # Return the prediction of how much influence we'd have left
-#            return int((self.remainingInfluence - self.cutoff)) - ceil(cost)
-#        else:
-#            # We cannot hit this one
-#            return -1
-#
-#    def addTarget(self, target):
-#        estCost = self.estimateCost(target.influence)
-#        self.consumedInfluence += estCost
-#        self.remainingInfluence -= estCost
-#        self.targets.append(target)
-#
-#    def makeCSV(self):
-#        pass
-#
-#class FiringSolution():
-#    # The target list - unparcelled to given ROs. 
-#    def __init__(self, hitlists = {}):
-#        self.targets = []
-#
-#        # The total influence cost of executing this firing solution
-#        self.cost = 0 
-#    
-#        # Each RO gets a hitlist of targets in the order they are to be sacrificed to the Overseer
-#        # The hitlist will also specify whether they are to banned or ejected
-#        # These hitlists are populated via taking the next target from targets after population, 
-#        # deciding whom to assign it to, and appending that target to that ROs hitlist. 
-#        # When all targets have been distributed, the hitlists are ready to be sent out to each
-#        # RO - this is done when the makeReport() function is invoked in the FiringSolution
-#        # method. It will generate CSVs and terminal reports on who will banject/eject whom when.
-#        # Hitlists are stored as dicts with the RO's nation name being the key
-#
-#        # Simulated state of the region - including officer/del influence and remaining nations
-#        self.remainingNonWA = []
-#        self.remainingWA = []
-#        self.remainingNations = []
-#
-#        # Accept a hitlist from on high, all we need to do is populate it
-#        self.hitlists = hitlists
-#        # resultingData = None
-#
-#        self.total = 0
-#        self.failed = 0
-#
-#        self.failure = False
-#
-#    # Add someone we want GONE
-#    def addTarget(self, target): #), influence, isWA):
-#        self.cost += target.influence
-#        self.targets.append(target)
-#
-#    # Get the cost of this evil ploy
-#    def getCost(self):
-#        return self.cost
-#
-#    def setHitlists(self, hitlists):
-#        self.hitlists = hitlists
-#
-#    def getFailed(self):
-#        return self.targets[::-1][self.failed:]
-#
-#    def buildFiringSolution(self, reverse=True):
-#        # We wanna ban every last one of these
-#        # They got appended small->large
-#        # We wanna go large->small when parcelling out
-#        # So, invert list order and start with the big bads
-#
-#        #skipped = []
-#        processed = 0
-#        infConsumed = 0
-#
-#        total = len(self.targets)
-#        self.total = total
-#        deficits = {}
-#        for ROname in self.hitlists.keys():
-#            # How much MORE influence do we need?
-#            deficits[ROname] = 0
-#
-#        for target in sorted(self.targets, key=lambda x:x.influence)[::-1]:
-#            # Fetch each nation's hitlist
-#
-#            offers = []
-#            print(f"Handling {target.name}")
-#
-#            for ROname in self.hitlists.keys():
-#                RO = self.hitlists[ROname]
-#                # How much will it cost?
-#                offer = RO.canHit(target.influence)
-#
-#                # How much will be free after?
-#                offer = (RO.remainingInfluence - RO.cutoff) - offer
-#
-#                if offer > 1:
-#                    offers.append((ROname, offer))
-#                    infConsumed += offer
-#            
-#            # Seek who is closest to getting soaked up exactly
-#            # Well shiiiit, nobody is offering. Let's just try for funsies.
-#            if not offers:
-#               # print(f"Error: We have run out of influence! Processed {processed}/{total}")
-#               # print(f"Died trying to banject {target.name}")
-#               # print(f"Influence consumed: {infConsumed}")
-#
-#                self.failure = True
-#                self.failed = processed
-#                eviloffers = []
-#
-#                for ROname in self.hitlists.keys():
-#                    RO = self.hitlists[ROname]
-#
-#                    # Can't hit. How much do we need to make it happen?
-#                    if RO.canHit(target.influence) == -1:
-#                        eviloffer = RO.estimateDeficit(target.influence) + deficits[ROname]
-##                        print(ROname, eviloffer)
-#                        eviloffers.append((ROname, eviloffer))
-#
-#                    # Who has the smallest deficit?
-#
-#                if eviloffers:
-#                    hitman = min(eviloffers, key=lambda x: x[1])
-#
-#                    deficits[hitman[0]] = hitman[1] #+= hitman[1]
-#
-##                    self.hitlists[hitman[0]].addTarget(target)
-##
-##                return False
-#                else:
-#                    print("Well that can't be right")
-#
-#            else:
-#                # Who is closest?
-#                hitman = min(offers, key=lambda x: x[1])
-#                print(f"[{processed}/{total}] {hitman[0]} ({self.hitlists[hitman[0]].remainingInfluence}) will take {target.name} ({target.influence} inf), leaving them with {self.hitlists[hitman[0]].remainingInfluence} influence to spare ({self.hitlists[hitman[0]].consumedInfluence} used of {self.hitlists[hitman[0]].startingInfluence} and a floor of {self.hitlists[hitman[0]].cutoff})")
-#                self.hitlists[hitman[0]].addTarget(target)
-#
-#                processed+=1
-#
-#        if deficits and [ro for ro in deficits.keys() if int(deficits[ro]) > 0] != []:
-#            print("********************************")
-#            print(" /!\\ INSUFFICIENT INFLUENCE /!\\")
-#            print("********************************")
-#            print(f"Successfully processed {processed}")
-#            for key in deficits.keys():
-#                print(f"{key} is short by {deficits[key]} influence")
-#
-#        if not self.failure:
-#            return True
-#        else:
-#            return False
-#
-#    def makeReport(self):
-#        pass
-
 class Transitions:
-    modes = ["nofuture","semifuture","future"]
+    modes = ["blind","halfblind","foresight"]
 
     def generateAll(StartState):
         startState = StartState #deepcopy(StartState)
@@ -264,26 +32,270 @@ class Transitions:
                 self.firingSolution = None
                 self.endState = self.startState 
 
-            elif mode == "nofuture":
-                self.nofuture()
+            elif mode == "blind":
+                self.blind()
 
-            elif mode == "semifuture":
-                self.semifuture()
+            elif mode == "halfblind":
+                self.halfblind()
 
-            elif mode == "future":
-                self.future()
+            elif mode == "foresight":
+                self.foresight()
 
-        def nofuture(self):
+        def blind(self):
+            print("===== Computing blind transition strategy =====")
+            print("***********************************************")
+
+            self.endState = deepcopy(self.startState)
+            self.firingSolution = FiringSolution()
+
+
+            if self.endState.delegateNation.influence > self.endState.getCosts()[1]:
+                print()
+                print(f"Delegate HAS sufficient influence! No purge necessary! Cost is {self.endState.getCosts()[1]}")
+                print()
+
+                self.firingSolution = None
+                return self.firingSolution
+
+            print(f"Delegate does NOT have sufficient influence. Cost to transition is {self.endState.getCosts()[1]}")
+            delegate = self.endState.delegateNation
+            exempt = self.endState.delegateNation.endorsers
+
+            # Build targeting parameters
+            targets = self.endState.nations
+            targets = sorted(targets, key=lambda x: x.influence)
+
+            mindex = 0
+
+            # If we need another target, and we have another to pick from, launch the attack
+            while self.endState.getCosts()[1] > delegate.influence and len(targets) > mindex:
+                # Remove cheapest remaining target and assign to targetlist
+                considered = targets[mindex]
+
+                if considered.influence < 0:
+                    considered.influence = 0
+
+                if standardize(considered.name) in self.endState.donotban or standardize(considered.name) in exempt:
+                    mindex += 1
+                    continue
+
+                else:
+                    target = targets.pop(mindex)
+                    self.firingSolution.addTarget(target)
+                    self.endState.remove(target.name)
+
+            if self.endState.getCosts()[1] > delegate.influence:
+                print("Error: Exhausted target list with blind strategy (somehow)")
+                print(f"Cost is {self.endState.getCosts()[1]}, we have {delegate.influence}")
+                print(f"Estimated gap: {self.endState.getCosts()[1]-delegate.influence}")
+
+                self.firingSolution = None
+                return None
             
-            return
+            else:
+                print("Found potential target list via blind strategy.")
+                print(f"Transition cost is {self.endState.getCosts()[1]}, we have {delegate.influence}")
+                print(f"Requires ejecting {len(self.firingSolution.targets)} targets out of {len(self.startState.nations)}, leaving {len(self.endState.nations)}")
 
-        def semifuture(self):
+                hitlists = {}
+                for RO in self.endState.RONations:
+                    if RO.name == delegate.name:
+                        hitlists[RO.name] = Hitlist(RO, cutoff=ceil(self.endState.getCosts()[1]), delegate=True, banEnabled=False)
+                    else:
+                        hitlists[RO.name] = Hitlist(RO, banEnabled=False)
 
-            return
+                self.firingSolution.setHitlists(hitlists)
+                
+                if self.firingSolution.buildFiringSolution():
+                    print("[+] SUCCESSFULLY BUILT FIRING SOLUTION")
+                    print()
+                    print("Firing solution result summary:")
+                    print(f"Transition cost is {self.endState.getCosts()[1]}; The delegate will have {delegate.influence} remaining")
+                    print("=== END OF REPORT ===")
+                    print()
+                    return self.firingSolution
+                else:
+                    print("[!] FAILED TO BUILD FIRING SOLUTION")
+                    print("=== END OF REPORT ===")
+                    print()
+                    return None
 
-        def future(self):
+        def halfblind(self):
+            print("===== Computing half-blind transition strategy =====")
+            print("****************************************************")
 
-            return
+            self.endState = deepcopy(self.startState)
+            self.firingSolution = FiringSolution()
+
+
+            if self.endState.delegateNation.influence > self.endState.getCosts()[1]:
+                print()
+                print(f"Delegate HAS sufficient influence! No purge necessary! Cost is {self.endState.getCosts()[1]}")
+                print()
+
+                self.firingSolution = None
+                return self.firingSolution
+
+            print(f"Delegate does NOT have sufficient influence. Cost to transition is {self.endState.getCosts()[1]}")
+            delegate = self.endState.delegateNation
+            exempt = self.endState.delegateNation.endorsers
+
+            # Build targeting parameters
+            WAtargs = self.endState.WANations
+            nWAtargs = self.endState.nonWANations
+
+            # Prioritize WA nations
+            targets = sorted(WAtargs, key=lambda x: x.influence)
+            targets += sorted(nWAtargs, key=lambda x: x.influence)
+
+            mindex = 0
+
+            # If we need another target, and we have another to pick from, launch the attack
+            while self.endState.getCosts()[1] > delegate.influence and len(targets) > mindex:
+                # Remove cheapest remaining target and assign to targetlist
+                considered = targets[mindex]
+
+                if considered.influence < 0:
+                    considered.influence = 0
+
+                if standardize(considered.name) in self.endState.donotban or standardize(considered.name) in exempt:
+                    mindex += 1
+                    continue
+
+                else:
+                    target = targets.pop(mindex)
+                    self.firingSolution.addTarget(target)
+                    self.endState.remove(target.name)
+
+            if self.endState.getCosts()[1] > delegate.influence:
+                print("Error: Exhausted target list with blind strategy (somehow)")
+                print(f"Cost is {self.endState.getCosts()[1]}, we have {delegate.influence}")
+                print(f"Estimated gap: {self.endState.getCosts()[1]-delegate.influence}")
+
+                self.firingSolution = None
+                return None
+            
+            else:
+                print("Found potential target list via blind strategy.")
+                print(f"Transition cost is {self.endState.getCosts()[1]}, we have {delegate.influence}")
+                print(f"Requires ejecting {len(self.firingSolution.targets)} targets out of {len(self.startState.nations)}, leaving {len(self.endState.nations)}")
+
+                hitlists = {}
+                for RO in self.endState.RONations:
+                    if RO.name == delegate.name:
+                        hitlists[RO.name] = Hitlist(RO, cutoff=ceil(self.endState.getCosts()[1]), delegate=True, banEnabled=False)
+                    else:
+                        hitlists[RO.name] = Hitlist(RO, banEnabled=False)
+
+                self.firingSolution.setHitlists(hitlists)
+                
+                if self.firingSolution.buildFiringSolution():
+                    print("[+] SUCCESSFULLY BUILT FIRING SOLUTION")
+                    print()
+                    print("Firing solution result summary:")
+                    print(f"Transition cost is {self.endState.getCosts()[1]}; The delegate will have {delegate.influence} remaining")
+                    print("=== END OF REPORT ===")
+                    print()
+                    return self.firingSolution
+                else:
+                    print("[!] FAILED TO BUILD FIRING SOLUTION")
+                    print("=== END OF REPORT ===")
+                    print()
+                    return None
+
+        def foresight(self):
+            print("===== Computing foresight transition strategy =====")
+            print("***************************************************")
+            print("ABORTED")
+            return None
+
+            self.endState = deepcopy(self.startState)
+            self.firingSolution = FiringSolution()
+
+
+            if self.endState.delegateNation.influence > self.endState.getCosts()[1]:
+                print()
+                print(f"Delegate HAS sufficient influence! No purge necessary! Cost is {self.endState.getCosts()[1]}")
+                print()
+
+                self.firingSolution = None
+                return self.firingSolution
+
+            print(f"Delegate does NOT have sufficient influence. Cost to transition is {self.endState.getCosts()[1]}")
+            delegate = self.endState.delegateNation
+            exempt = self.endState.delegateNation.endorsers
+
+            # Build targeting parameters
+            WANations = self.endState.WANations
+            NWANations = self.endState.NWANations
+
+            wmindex = 0
+            nmindex = 0
+
+            # If we need another target, and we have another to pick from, launch the attack
+            while self.endState.getCosts()[1] > delegate.influence:
+                # We have at least one potential nonendo to work against
+                if len(WANations) > wmindex:
+                    considered = WANations[wmindex]
+
+                    # Oops, it *is* an endo! SKIP!!!
+                    if standardize(considered.name) in self.endState.donotban or standardize(considered.name) in exempt:
+                        wmindex += 1
+                        continue
+                    
+                    else:
+                        pass
+                        # How many non-WA can I get for this?
+
+
+                # We are OUT of nonendos!!! Move onto non-WA
+                else:
+                    considered = NWANations[nmindex]
+
+                    # Whitelist, skip
+                    if standardize(considered.name) in self.endState.donotban or standardize(considered.name) in exempt:
+                        nmindex += 1
+                        continue
+
+                    else:
+                        pass
+
+
+            if self.endState.getCosts()[1] > delegate.influence:
+                print("Error: Exhausted target list with blind strategy (somehow)")
+                print(f"Cost is {self.endState.getCosts()[1]}, we have {delegate.influence}")
+                print(f"Estimated gap: {self.endState.getCosts()[1]-delegate.influence}")
+
+                self.firingSolution = None
+                return None
+            
+            else:
+                print("Found potential target list via blind strategy.")
+                print(f"Transition cost is {self.endState.getCosts()[1]}, we have {delegate.influence}")
+                print(f"Requires ejecting {len(self.firingSolution.targets)} targets out of {len(self.startState.nations)}, leaving {len(self.endState.nations)}")
+
+                hitlists = {}
+                for RO in self.endState.RONations:
+                    if RO.name == delegate.name:
+                        hitlists[RO.name] = Hitlist(RO, cutoff=ceil(self.endState.getCosts()[1]), delegate=True, banEnabled=False)
+                    else:
+                        hitlists[RO.name] = Hitlist(RO, banEnabled=False)
+
+                self.firingSolution.setHitlists(hitlists)
+                
+                if self.firingSolution.buildFiringSolution():
+                    print("[+] SUCCESSFULLY BUILT FIRING SOLUTION")
+                    print()
+                    print("Firing solution result summary:")
+                    print(f"Transition cost is {self.endState.getCosts()[1]}; The delegate will have {delegate.influence} remaining")
+                    print("=== END OF REPORT ===")
+                    print()
+                    return self.firingSolution
+                else:
+                    print("[!] FAILED TO BUILD FIRING SOLUTION")
+                    print("=== END OF REPORT ===")
+                    print()
+                    return None
 
         def getMode(self):
             return self.mode
@@ -295,6 +307,43 @@ class Transitions:
         def getState(self):
             # The resultant state of executing self.firingSolution
             return self.endState
+
+class Chaos():
+    def __init__(self, startState, EjectAllowed=False):
+        self.startState = deepcopy(startState)
+        self.ejectAllowed = EjectAllowed
+        self.endState = None
+        self.firingSolution = None
+
+        self.causeChaos()
+
+    def causeChaos(self):
+        self.firingSolution = FiringSolution()
+        self.endState = deepcopy(self.startState)
+
+        targets = self.startState.nations
+        delegate = self.endState.delegateNation
+        targets = sorted(targets, key=lambda x: x.influence)
+        for target in targets:
+            # Do not ban our ROs
+            if standardize(target.name) not in self.endState.donotban:
+                self.firingSolution.addTarget(target)
+
+        hitlists = {}
+        for RO in self.endState.RONations:
+            if delegate and standardize(RO.name) != delegate.name:
+                hitlists[RO.name] = Hitlist(RO)
+
+        if delegate:
+            hitlists[delegate.name] = Hitlist(delegate, cutoff=0, delegate=True)
+        self.firingSolution.setHitlists(hitlists)
+
+        if self.firingSolution.buildFiringSolution(invert=False, chaos=True):
+            print("Successfully caused chaos")
+            return self.firingSolution
+        else:
+            print("How?")
+            return None
 
 class Passwords:
     modes = ["nofuture","semifuture","nofuture_noex","semifuture_noex"] #,"future","future_noex"]
@@ -826,7 +875,7 @@ class State():
 # In return, it will take this data, and compute for us
 # A way to do it ASAP.
 class EndState():
-    def __init__(self, cache, allNations, WANations, nonWANations, regionInfo, doPassword, doTransition, ghosts=[], safe=[]):
+    def __init__(self, cache, allNations, WANations, nonWANations, regionInfo, doPassword, doTransition, ghosts=[], safe=[], chaos=False, chaosEjections=False):
         self.cache = cache
         self.allNations = allNations
         self.WANations = WANations
@@ -845,6 +894,10 @@ class EndState():
 
         self.passwords = []
         self.transitions = []
+
+    def generateChaos(self):
+        chaos = Chaos(self.startState)
+        return [chaos]
 
     # Generate a recipe for each strategy we know
     def generateRecipes(self):
