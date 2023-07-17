@@ -12,7 +12,7 @@ class Transitions:
         allTransitions = []
         for mode in Transitions.modes:
             transition = Transitions.Transition(startState, mode=mode)
-            if transition:
+            if transition.firingSolution:
                 allTransitions.append(transition)
 
         return allTransitions
@@ -355,7 +355,7 @@ class Passwords:
         for mode in Passwords.modes:
             # generates an end state
             password = Passwords.Password(startState, mode=mode)
-            if password:
+            if password.firingSolution:
                 allPasswords.append(password)
 
         return allPasswords
